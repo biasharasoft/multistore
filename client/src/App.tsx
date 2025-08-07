@@ -3,7 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "./lib/auth";
 import { MainLayout } from "./components/layout/MainLayout";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -21,8 +22,49 @@ import Settings from "./pages/Settings";
 import Expenses from "./pages/Expenses";
 import Purchase from "./pages/Purchase";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 
 const queryClient = new QueryClient();
+
+// Protected Route wrapper
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Public Route wrapper (redirect to dashboard if already authenticated)
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -31,25 +73,35 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public Auth Routes */}
+          <Route path="/auth/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/auth/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/auth/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+
+          {/* Protected Routes */}
+          {/* Root redirects to dashboard */}
+          <Route path="/" element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />
+          
           {/* POS page without layout */}
-          <Route path="/pos" element={<POS />} />
+          <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
           
           {/* All other pages with main layout */}
-          <Route path="/" element={<MainLayout><Index /></MainLayout>} />
-          <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
-          <Route path="/stores" element={<MainLayout><Stores /></MainLayout>} />
-          <Route path="/stores/:id" element={<MainLayout><StoreDetail /></MainLayout>} />
-          <Route path="/products" element={<MainLayout><Products /></MainLayout>} />
-          <Route path="/products/:id" element={<MainLayout><ProductDetail /></MainLayout>} />
-          <Route path="/inventory" element={<MainLayout><Inventory /></MainLayout>} />
-          <Route path="/suppliers" element={<MainLayout><Suppliers /></MainLayout>} />
-          <Route path="/customers" element={<MainLayout><Customers /></MainLayout>} />
-          <Route path="/sales" element={<MainLayout><Sales /></MainLayout>} />
-          <Route path="/expenses" element={<MainLayout><Expenses /></MainLayout>} />
-          <Route path="/purchase" element={<MainLayout><Purchase /></MainLayout>} />
-          <Route path="/analytics" element={<MainLayout><Analytics /></MainLayout>} />
-          <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
-          <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
+          <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
+          <Route path="/stores" element={<ProtectedRoute><MainLayout><Stores /></MainLayout></ProtectedRoute>} />
+          <Route path="/stores/:id" element={<ProtectedRoute><MainLayout><StoreDetail /></MainLayout></ProtectedRoute>} />
+          <Route path="/products" element={<ProtectedRoute><MainLayout><Products /></MainLayout></ProtectedRoute>} />
+          <Route path="/products/:id" element={<ProtectedRoute><MainLayout><ProductDetail /></MainLayout></ProtectedRoute>} />
+          <Route path="/inventory" element={<ProtectedRoute><MainLayout><Inventory /></MainLayout></ProtectedRoute>} />
+          <Route path="/suppliers" element={<ProtectedRoute><MainLayout><Suppliers /></MainLayout></ProtectedRoute>} />
+          <Route path="/customers" element={<ProtectedRoute><MainLayout><Customers /></MainLayout></ProtectedRoute>} />
+          <Route path="/sales" element={<ProtectedRoute><MainLayout><Sales /></MainLayout></ProtectedRoute>} />
+          <Route path="/expenses" element={<ProtectedRoute><MainLayout><Expenses /></MainLayout></ProtectedRoute>} />
+          <Route path="/purchase" element={<ProtectedRoute><MainLayout><Purchase /></MainLayout></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><MainLayout><Analytics /></MainLayout></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
+          
+          {/* Fallback */}
+          <Route path="*" element={<ProtectedRoute><MainLayout><NotFound /></MainLayout></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
