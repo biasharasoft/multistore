@@ -134,3 +134,21 @@ export const insertStoreSchema = createInsertSchema(stores).pick({
 
 export type InsertStore = z.infer<typeof insertStoreSchema>;
 export type Store = typeof stores.$inferSelect;
+
+// Regions table
+export const regions = pgTable("regions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  isActive: boolean("is_active").default(false),
+});
+
+// Region validation schemas
+export const insertRegionSchema = createInsertSchema(regions).pick({
+  name: true,
+  isActive: true,
+}).extend({
+  name: z.string().min(1, "Region name is required"),
+});
+
+export type InsertRegion = z.infer<typeof insertRegionSchema>;
+export type Region = typeof regions.$inferSelect;

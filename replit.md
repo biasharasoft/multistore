@@ -51,6 +51,15 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
 - All components and pages preserved from original project
 
 ## Recent Changes
+- **2025-08-07**: Added regions table to database schema
+  - Created regions table with id, name, and is_active columns
+  - Set is_active to default false as requested
+  - Added proper Drizzle schema validation for region management
+- **2025-08-07**: Fixed store editing functionality
+  - Implemented complete edit store functionality with update API calls
+  - Added edit store dialog with pre-filled form data
+  - Connected edit buttons in both card and table views to proper handlers
+  - Added proper state management for edit operations
 - **2025-08-07**: Implemented store management with database persistence
   - Enhanced stores database schema with detailed fields (manager, address, contact info, hours)
   - Created backend API endpoints for store CRUD operations with user ownership validation
