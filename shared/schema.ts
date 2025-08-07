@@ -1,5 +1,6 @@
 import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Session storage table for authentication
@@ -11,7 +12,7 @@ export const sessions = pgTable("sessions", {
 
 // Users table for authentication
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default("gen_random_uuid()"),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").notNull().unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
@@ -95,7 +96,7 @@ export type NewPasswordData = z.infer<typeof newPasswordSchema>;
 
 // Stores table
 export const stores = pgTable("stores", {
-  id: varchar("id").primaryKey().default("gen_random_uuid()"),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name").notNull(),
   manager: varchar("manager"),

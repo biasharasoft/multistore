@@ -1,0 +1,49 @@
+Error creating store: error: duplicate key value violates unique constraint "stores_pkey"
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.createStore (/home/runner/workspace/server/storage.ts:59:21)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:185:24) {
+  length: 199,
+  severity: 'ERROR',
+  code: '23505',
+  detail: 'Key (id)=(gen_random_uuid()) already exists.',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'stores',
+  column: undefined,
+  dataType: undefined,
+  constraint: 'stores_pkey',
+  file: 'nbtinsert.c',
+  line: '666',
+  routine: '_bt_check_unique'
+}
+10:02:25 AM [express] POST /api/stores 400 in 200ms :: {"message":"duplicate key value violates uniqu…
+Error creating store: error: duplicate key value violates unique constraint "stores_pkey"
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.createStore (/home/runner/workspace/server/storage.ts:59:21)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:185:24) {
+  length: 199,
+  severity: 'ERROR',
+  code: '23505',
+  detail: 'Key (id)=(gen_random_uuid()) already exists.',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'stores',
+  column: undefined,
+  dataType: undefined,
+  constraint: 'stores_pkey',
+  file: 'nbtinsert.c',
+  line: '666',
+  routine: '_bt_check_unique'
+}
