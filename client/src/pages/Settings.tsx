@@ -802,16 +802,6 @@ export default function Settings() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="editCategoryDescription">Description</Label>
-                  <Textarea
-                    id="editCategoryDescription"
-                    value={editCategoryDescription}
-                    onChange={(e) => setEditCategoryDescription(e.target.value)}
-                    placeholder="Enter category description"
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="editCategoryStatus">Status</Label>
                   <Select value={editCategoryStatus} onValueChange={setEditCategoryStatus}>
                     <SelectTrigger>
