@@ -1,4 +1,4 @@
-import { users, stores, regions, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion } from "@shared/schema";
+import { users, stores, regions, productsCategories, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -19,6 +19,14 @@ export interface IStorage {
   // Region operations
   getAllRegions(): Promise<Region[]>;
   getActiveRegions(): Promise<Region[]>;
+  
+  // Products Categories operations
+  getAllProductsCategories(): Promise<ProductsCategory[]>;
+  getActiveProductsCategories(): Promise<ProductsCategory[]>;
+  getProductsCategoryById(id: string): Promise<ProductsCategory | undefined>;
+  createProductsCategory(category: InsertProductsCategory): Promise<ProductsCategory>;
+  updateProductsCategory(id: string, updates: Partial<InsertProductsCategory>): Promise<ProductsCategory>;
+  deleteProductsCategory(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -116,6 +124,65 @@ export class DatabaseStorage implements IStorage {
       .where(eq(regions.isActive, true))
       .orderBy(regions.name);
     return activeRegions;
+  }
+
+  // Products Categories operations
+  async getAllProductsCategories(): Promise<ProductsCategory[]> {
+    const allCategories = await db
+      .select()
+      .from(productsCategories)
+      .orderBy(productsCategories.name);
+    return allCategories;
+  }
+
+  async getActiveProductsCategories(): Promise<ProductsCategory[]> {
+    const activeCategories = await db
+      .select()
+      .from(productsCategories)
+      .where(eq(productsCategories.isActive, true))
+      .orderBy(productsCategories.name);
+    return activeCategories;
+  }
+
+  async getProductsCategoryById(id: string): Promise<ProductsCategory | undefined> {
+    const [category] = await db
+      .select()
+      .from(productsCategories)
+      .where(eq(productsCategories.id, id));
+    return category || undefined;
+  }
+
+  async createProductsCategory(categoryData: InsertProductsCategory): Promise<ProductsCategory> {
+    const [category] = await db
+      .insert(productsCategories)
+      .values(categoryData)
+      .returning();
+    return category;
+  }
+
+  async updateProductsCategory(id: string, updates: Partial<InsertProductsCategory>): Promise<ProductsCategory> {
+    const [category] = await db
+      .update(productsCategories)
+      .set(updates)
+      .where(eq(productsCategories.id, id))
+      .returning();
+    
+    if (!category) {
+      throw new Error("Category not found");
+    }
+    
+    return category;
+  }
+
+  async deleteProductsCategory(id: string): Promise<void> {
+    const result = await db
+      .delete(productsCategories)
+      .where(eq(productsCategories.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Category not found");
+    }
   }
 }
 

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -12,6 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { type ProductsCategory, type InsertProductsCategory } from "@shared/schema";
 import { 
   Settings as SettingsIcon,
   User,
@@ -43,33 +47,95 @@ export default function Settings() {
   const [categoryType, setCategoryType] = useState<"products" | "expenses">("products");
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<ProductsCategory | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [editCategoryName, setEditCategoryName] = useState("");
   const [editCategoryDescription, setEditCategoryDescription] = useState("");
   const [editCategoryStatus, setEditCategoryStatus] = useState("");
-  
-  const [productCategories, setProductCategories] = useState([
-    { id: 1, name: "Electronics", description: "Electronic devices and accessories", productCount: 45, status: "active" },
-    { id: 2, name: "Clothing", description: "Apparel and fashion items", productCount: 32, status: "active" },
-    { id: 3, name: "Home & Garden", description: "Home improvement and garden supplies", productCount: 28, status: "active" },
-    { id: 4, name: "Books", description: "Books and educational materials", productCount: 15, status: "inactive" },
-    { id: 5, name: "Sports", description: "Sports equipment and accessories", productCount: 22, status: "active" },
-  ]);
 
-  const [expenseCategories, setExpenseCategories] = useState([
-    { id: 1, name: "Office Supplies", description: "Stationery, office equipment, and supplies", expenseCount: 23, status: "active" },
-    { id: 2, name: "Marketing", description: "Advertising, promotional materials, and campaigns", expenseCount: 18, status: "active" },
-    { id: 3, name: "Utilities", description: "Electricity, water, internet, and phone bills", expenseCount: 12, status: "active" },
-    { id: 4, name: "Travel", description: "Business travel and transportation costs", expenseCount: 8, status: "active" },
-    { id: 5, name: "Equipment", description: "Machinery, tools, and equipment purchases", expenseCount: 15, status: "active" },
-    { id: 6, name: "Maintenance", description: "Repairs and maintenance costs", expenseCount: 6, status: "inactive" },
-  ]);
+  // Fetch products categories
+  const { data: productCategories = [], isLoading: isLoadingProductCategories } = useQuery<ProductsCategory[]>({
+    queryKey: ['/api/products-categories'],
+    enabled: categoryType === "products",
+  });
+
+  // Mock expense categories for now (since we're only implementing products categories)
+  const expenseCategories = [
+    { id: "1", name: "Office Supplies", description: "Stationery, office equipment, and supplies", expenseCount: 23, status: "active" },
+    { id: "2", name: "Marketing", description: "Advertising, promotional materials, and campaigns", expenseCount: 18, status: "active" },
+    { id: "3", name: "Utilities", description: "Electricity, water, internet, and phone bills", expenseCount: 12, status: "active" },
+    { id: "4", name: "Travel", description: "Business travel and transportation costs", expenseCount: 8, status: "active" },
+    { id: "5", name: "Equipment", description: "Machinery, tools, and equipment purchases", expenseCount: 15, status: "active" },
+    { id: "6", name: "Maintenance", description: "Repairs and maintenance costs", expenseCount: 6, status: "inactive" },
+  ];
+
+  // Create products category mutation
+  const createProductsCategoryMutation = useMutation({
+    mutationFn: async (data: InsertProductsCategory) => {
+      return await apiRequest('/api/products-categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products-categories'] });
+      setNewCategoryName("");
+      setNewCategoryDescription("");
+      setIsAddCategoryOpen(false);
+      toast({
+        title: "Success",
+        description: "Product category has been added successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error creating category:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create product category. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update products category mutation
+  const updateProductsCategoryMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertProductsCategory> }) => {
+      return await apiRequest(`/api/products-categories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products-categories'] });
+      setIsEditCategoryOpen(false);
+      setEditingCategory(null);
+      toast({
+        title: "Success",
+        description: "Product category has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating category:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update product category. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Map product categories to the expected format for the UI
+  const mappedProductCategories = productCategories.map(category => ({
+    id: category.id,
+    name: category.name,
+    description: "", // Since our schema doesn't have description
+    productCount: 0, // This would need to be calculated if we had products
+    status: category.isActive ? "active" : "inactive",
+  }));
 
   // Get current categories based on selected type
-  const currentCategories = categoryType === "products" ? productCategories : expenseCategories;
-  const setCurrentCategories = categoryType === "products" ? setProductCategories : setExpenseCategories;
+  const currentCategories = categoryType === "products" ? mappedProductCategories : expenseCategories;
 
   const stores = [
     { id: 1, name: "Downtown Branch", address: "123 Main St, Downtown", status: "active" },
@@ -99,36 +165,39 @@ export default function Settings() {
       return;
     }
 
-    const newCategory = {
-      id: Math.max(...currentCategories.map(c => c.id)) + 1,
-      name: newCategoryName.trim(),
-      description: newCategoryDescription.trim(),
-      ...(categoryType === "products" ? { productCount: 0 } : { expenseCount: 0 }),
-      status: "active" as const,
-    };
-
     if (categoryType === "products") {
-      setProductCategories([...productCategories, newCategory as any]);
+      createProductsCategoryMutation.mutate({
+        name: newCategoryName.trim(),
+        isActive: true,
+      });
     } else {
-      setExpenseCategories([...expenseCategories, newCategory as any]);
+      // For expense categories, we'll just show a toast since we haven't implemented that yet
+      toast({
+        title: "Not Implemented",
+        description: "Expense categories are not yet supported.",
+        variant: "destructive",
+      });
     }
-
-    setNewCategoryName("");
-    setNewCategoryDescription("");
-    setIsAddCategoryOpen(false);
-    
-    toast({
-      title: "Success",
-      description: `${categoryType === "products" ? "Product" : "Expense"} category "${newCategory.name}" has been added.`,
-    });
   };
 
   const handleEditCategory = (category: any) => {
-    setEditingCategory(category);
-    setEditCategoryName(category.name);
-    setEditCategoryDescription(category.description);
-    setEditCategoryStatus(category.status);
-    setIsEditCategoryOpen(true);
+    if (categoryType === "products") {
+      // Find the original ProductsCategory from productCategories array
+      const originalCategory = productCategories.find(pc => pc.id === category.id);
+      if (originalCategory) {
+        setEditingCategory(originalCategory);
+        setEditCategoryName(originalCategory.name);
+        setEditCategoryDescription(""); // Our schema doesn't have description
+        setEditCategoryStatus(originalCategory.isActive ? "active" : "inactive");
+        setIsEditCategoryOpen(true);
+      }
+    } else {
+      setEditingCategory(category);
+      setEditCategoryName(category.name);
+      setEditCategoryDescription(category.description);
+      setEditCategoryStatus(category.status);
+      setIsEditCategoryOpen(true);
+    }
   };
 
   const handleUpdateCategory = () => {
@@ -141,40 +210,22 @@ export default function Settings() {
       return;
     }
 
-    if (categoryType === "products") {
-      setProductCategories(productCategories.map(category => 
-        category.id === editingCategory.id
-          ? {
-              ...category,
-              name: editCategoryName.trim(),
-              description: editCategoryDescription.trim(),
-              status: editCategoryStatus as "active" | "inactive"
-            }
-          : category
-      ));
+    if (categoryType === "products" && editingCategory) {
+      updateProductsCategoryMutation.mutate({
+        id: editingCategory.id,
+        data: {
+          name: editCategoryName.trim(),
+          isActive: editCategoryStatus === "active",
+        }
+      });
     } else {
-      setExpenseCategories(expenseCategories.map(category => 
-        category.id === editingCategory.id
-          ? {
-              ...category,
-              name: editCategoryName.trim(),
-              description: editCategoryDescription.trim(),
-              status: editCategoryStatus as "active" | "inactive"
-            }
-          : category
-      ));
+      // For expense categories, just show not implemented message
+      toast({
+        title: "Not Implemented",
+        description: "Expense category editing is not yet supported.",
+        variant: "destructive",
+      });
     }
-
-    setIsEditCategoryOpen(false);
-    setEditingCategory(null);
-    setEditCategoryName("");
-    setEditCategoryDescription("");
-    setEditCategoryStatus("");
-    
-    toast({
-      title: "Success",
-      description: `${categoryType === "products" ? "Product" : "Expense"} category "${editCategoryName}" has been updated.`,
-    });
   };
 
   const handleAddMember = () => {
@@ -593,7 +644,7 @@ export default function Settings() {
                 </div>
                 <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button data-testid="button-add-category">
                       <Plus className="h-4 w-4 mr-2" />
                       Add Category
                     </Button>
@@ -610,6 +661,7 @@ export default function Settings() {
                         <Label htmlFor="categoryName">Category Name</Label>
                         <Input
                           id="categoryName"
+                          data-testid="input-category-name"
                           value={newCategoryName}
                           onChange={(e) => setNewCategoryName(e.target.value)}
                           placeholder="Enter category name"
@@ -619,6 +671,7 @@ export default function Settings() {
                         <Label htmlFor="categoryDescription">Description</Label>
                         <Textarea
                           id="categoryDescription"
+                          data-testid="textarea-category-description"
                           value={newCategoryDescription}
                           onChange={(e) => setNewCategoryDescription(e.target.value)}
                           placeholder="Enter category description"
@@ -627,11 +680,15 @@ export default function Settings() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)}>
+                      <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)} data-testid="button-cancel-category">
                         Cancel
                       </Button>
-                      <Button onClick={handleAddCategory}>
-                        Add Category
+                      <Button 
+                        onClick={handleAddCategory} 
+                        disabled={createProductsCategoryMutation.isPending}
+                        data-testid="button-save-category"
+                      >
+                        {createProductsCategoryMutation.isPending ? "Adding..." : "Add Category"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -640,36 +697,42 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {currentCategories.map((category) => (
-                  <div key={category.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Tag className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{category.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {category.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {categoryType === "products" 
-                            ? `${(category as any).productCount} products`
-                            : `${(category as any).expenseCount} expenses`
-                          }
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Badge variant={category.status === 'active' ? 'default' : 'secondary'}>
-                        {category.status}
-                      </Badge>
-                      <Button variant="outline" size="sm" onClick={() => handleEditCategory(category)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
-                    </div>
+                {categoryType === "products" && isLoadingProductCategories ? (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
-                ))}
+                ) : (
+                  currentCategories.map((category) => (
+                    <div key={category.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <Tag className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{category.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {category.description}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {categoryType === "products" 
+                              ? `${(category as any).productCount} products`
+                              : `${(category as any).expenseCount} expenses`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Badge variant={category.status === 'active' ? 'default' : 'secondary'}>
+                          {category.status}
+                        </Badge>
+                        <Button variant="outline" size="sm" onClick={() => handleEditCategory(category)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

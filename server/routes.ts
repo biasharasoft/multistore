@@ -10,7 +10,8 @@ import {
   resetPasswordSchema,
   newPasswordSchema,
   insertStoreSchema,
-  insertRegionSchema
+  insertRegionSchema,
+  insertProductsCategorySchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -259,6 +260,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching active regions:', error);
       res.status(500).json({ 
         message: error instanceof Error ? error.message : 'Failed to fetch active regions' 
+      });
+    }
+  });
+
+  // Products Categories Routes
+  
+  // Get all products categories
+  app.get('/api/products-categories', async (req, res) => {
+    try {
+      const categories = await storage.getAllProductsCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching products categories:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch products categories' 
+      });
+    }
+  });
+
+  // Get active products categories only
+  app.get('/api/products-categories/active', async (req, res) => {
+    try {
+      const activeCategories = await storage.getActiveProductsCategories();
+      res.json(activeCategories);
+    } catch (error) {
+      console.error('Error fetching active products categories:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch active products categories' 
+      });
+    }
+  });
+
+  // Get a specific products category by ID
+  app.get('/api/products-categories/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const category = await storage.getProductsCategoryById(id);
+      
+      if (!category) {
+        return res.status(404).json({ message: 'Products category not found' });
+      }
+      
+      res.json(category);
+    } catch (error) {
+      console.error('Error fetching products category:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch products category' 
+      });
+    }
+  });
+
+  // Create a new products category
+  app.post('/api/products-categories', async (req, res) => {
+    try {
+      const categoryData = insertProductsCategorySchema.parse(req.body);
+      const newCategory = await storage.createProductsCategory(categoryData);
+      
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error('Error creating products category:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to create products category' 
+      });
+    }
+  });
+
+  // Update a products category
+  app.put('/api/products-categories/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertProductsCategorySchema.partial().parse(req.body);
+      
+      const updatedCategory = await storage.updateProductsCategory(id, updates);
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error('Error updating products category:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update products category' 
+      });
+    }
+  });
+
+  // Delete a products category
+  app.delete('/api/products-categories/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteProductsCategory(id);
+      res.json({ message: 'Products category deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting products category:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to delete products category' 
       });
     }
   });
