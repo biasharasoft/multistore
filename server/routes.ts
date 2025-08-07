@@ -8,7 +8,8 @@ import {
   registerSchema, 
   verifyOtpSchema, 
   resetPasswordSchema,
-  newPasswordSchema 
+  newPasswordSchema,
+  insertStoreSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -132,6 +133,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // In a JWT-based auth, logout is mainly client-side
     // But we can log the logout action or implement token blacklisting here
     res.json({ message: 'Logged out successfully' });
+  });
+
+  // Store Routes
+  
+  // Get all stores for the authenticated user
+  app.get('/api/stores', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const userStores = await storage.getStoresByUserId(userId);
+      res.json(userStores);
+    } catch (error) {
+      console.error('Error fetching stores:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch stores' 
+      });
+    }
+  });
+
+  // Get a specific store by ID (only if it belongs to the user)
+  app.get('/api/stores/:id', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const store = await storage.getStoreById(id);
+      if (!store) {
+        return res.status(404).json({ message: 'Store not found' });
+      }
+      
+      // Check if the store belongs to the user
+      if (store.userId !== userId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      res.json(store);
+    } catch (error) {
+      console.error('Error fetching store:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch store' 
+      });
+    }
+  });
+
+  // Create a new store
+  app.post('/api/stores', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const storeData = insertStoreSchema.parse(req.body);
+      
+      const newStore = await storage.createStore({
+        ...storeData,
+        userId,
+      });
+      
+      res.status(201).json(newStore);
+    } catch (error) {
+      console.error('Error creating store:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to create store' 
+      });
+    }
+  });
+
+  // Update a store
+  app.put('/api/stores/:id', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      const updates = insertStoreSchema.partial().parse(req.body);
+      
+      const updatedStore = await storage.updateStore(id, userId, updates);
+      res.json(updatedStore);
+    } catch (error) {
+      console.error('Error updating store:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update store' 
+      });
+    }
+  });
+
+  // Delete a store
+  app.delete('/api/stores/:id', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      await storage.deleteStore(id, userId);
+      res.json({ message: 'Store deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting store:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to delete store' 
+      });
+    }
   });
 
   // Health check

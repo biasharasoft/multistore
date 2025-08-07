@@ -92,3 +92,44 @@ export type RegisterData = z.infer<typeof registerSchema>;
 export type VerifyOtpData = z.infer<typeof verifyOtpSchema>;
 export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 export type NewPasswordData = z.infer<typeof newPasswordSchema>;
+
+// Stores table
+export const stores = pgTable("stores", {
+  id: varchar("id").primaryKey().default("gen_random_uuid()"),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  manager: varchar("manager"),
+  address: text("address").notNull(),
+  city: varchar("city"),
+  state: varchar("state"),
+  zipCode: varchar("zip_code"),
+  phone: varchar("phone"),
+  email: varchar("email"),
+  openTime: varchar("open_time"),
+  closeTime: varchar("close_time"),
+  status: varchar("status").default("open"), // open, closed, maintenance
+  employees: integer("employees").default(0),
+  monthlyGoal: integer("monthly_goal").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Store validation schemas
+export const insertStoreSchema = createInsertSchema(stores).pick({
+  name: true,
+  manager: true,
+  address: true,
+  city: true,
+  state: true,
+  zipCode: true,
+  phone: true,
+  email: true,
+  openTime: true,
+  closeTime: true,
+}).extend({
+  name: z.string().min(1, "Store name is required"),
+  address: z.string().min(1, "Address is required"),
+});
+
+export type InsertStore = z.infer<typeof insertStoreSchema>;
+export type Store = typeof stores.$inferSelect;
