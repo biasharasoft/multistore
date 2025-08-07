@@ -11,7 +11,8 @@ import {
   newPasswordSchema,
   insertStoreSchema,
   insertRegionSchema,
-  insertProductsCategorySchema
+  insertProductsCategorySchema,
+  insertExpensesCategorySchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -352,6 +353,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting products category:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to delete products category' 
+      });
+    }
+  });
+
+  // Expenses Categories Routes
+  
+  // Get all expenses categories
+  app.get('/api/expenses-categories', async (req, res) => {
+    try {
+      const categories = await storage.getAllExpensesCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching expenses categories:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch expenses categories' 
+      });
+    }
+  });
+
+  // Get active expenses categories only
+  app.get('/api/expenses-categories/active', async (req, res) => {
+    try {
+      const activeCategories = await storage.getActiveExpensesCategories();
+      res.json(activeCategories);
+    } catch (error) {
+      console.error('Error fetching active expenses categories:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch active expenses categories' 
+      });
+    }
+  });
+
+  // Get a specific expenses category by ID
+  app.get('/api/expenses-categories/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const category = await storage.getExpensesCategoryById(id);
+      
+      if (!category) {
+        return res.status(404).json({ message: 'Expenses category not found' });
+      }
+      
+      res.json(category);
+    } catch (error) {
+      console.error('Error fetching expenses category:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch expenses category' 
+      });
+    }
+  });
+
+  // Create a new expenses category
+  app.post('/api/expenses-categories', async (req, res) => {
+    try {
+      const categoryData = insertExpensesCategorySchema.parse(req.body);
+      const newCategory = await storage.createExpensesCategory(categoryData);
+      
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error('Error creating expenses category:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to create expenses category' 
+      });
+    }
+  });
+
+  // Update an expenses category
+  app.put('/api/expenses-categories/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertExpensesCategorySchema.partial().parse(req.body);
+      
+      const updatedCategory = await storage.updateExpensesCategory(id, updates);
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error('Error updating expenses category:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update expenses category' 
+      });
+    }
+  });
+
+  // Delete an expenses category
+  app.delete('/api/expenses-categories/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteExpensesCategory(id);
+      res.json({ message: 'Expenses category deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting expenses category:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to delete expenses category' 
       });
     }
   });

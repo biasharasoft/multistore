@@ -1,4 +1,4 @@
-import { users, stores, regions, productsCategories, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory } from "@shared/schema";
+import { users, stores, regions, productsCategories, expensesCategories, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -27,6 +27,14 @@ export interface IStorage {
   createProductsCategory(category: InsertProductsCategory): Promise<ProductsCategory>;
   updateProductsCategory(id: string, updates: Partial<InsertProductsCategory>): Promise<ProductsCategory>;
   deleteProductsCategory(id: string): Promise<void>;
+  
+  // Expenses Categories operations
+  getAllExpensesCategories(): Promise<ExpensesCategory[]>;
+  getActiveExpensesCategories(): Promise<ExpensesCategory[]>;
+  getExpensesCategoryById(id: string): Promise<ExpensesCategory | undefined>;
+  createExpensesCategory(category: InsertExpensesCategory): Promise<ExpensesCategory>;
+  updateExpensesCategory(id: string, updates: Partial<InsertExpensesCategory>): Promise<ExpensesCategory>;
+  deleteExpensesCategory(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -178,6 +186,65 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(productsCategories)
       .where(eq(productsCategories.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Category not found");
+    }
+  }
+
+  // Expenses Categories operations
+  async getAllExpensesCategories(): Promise<ExpensesCategory[]> {
+    const allCategories = await db
+      .select()
+      .from(expensesCategories)
+      .orderBy(expensesCategories.name);
+    return allCategories;
+  }
+
+  async getActiveExpensesCategories(): Promise<ExpensesCategory[]> {
+    const activeCategories = await db
+      .select()
+      .from(expensesCategories)
+      .where(eq(expensesCategories.isActive, true))
+      .orderBy(expensesCategories.name);
+    return activeCategories;
+  }
+
+  async getExpensesCategoryById(id: string): Promise<ExpensesCategory | undefined> {
+    const [category] = await db
+      .select()
+      .from(expensesCategories)
+      .where(eq(expensesCategories.id, id));
+    return category || undefined;
+  }
+
+  async createExpensesCategory(categoryData: InsertExpensesCategory): Promise<ExpensesCategory> {
+    const [category] = await db
+      .insert(expensesCategories)
+      .values(categoryData)
+      .returning();
+    return category;
+  }
+
+  async updateExpensesCategory(id: string, updates: Partial<InsertExpensesCategory>): Promise<ExpensesCategory> {
+    const [category] = await db
+      .update(expensesCategories)
+      .set(updates)
+      .where(eq(expensesCategories.id, id))
+      .returning();
+    
+    if (!category) {
+      throw new Error("Category not found");
+    }
+    
+    return category;
+  }
+
+  async deleteExpensesCategory(id: string): Promise<void> {
+    const result = await db
+      .delete(expensesCategories)
+      .where(eq(expensesCategories.id, id))
       .returning();
     
     if (result.length === 0) {
