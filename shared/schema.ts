@@ -173,3 +173,21 @@ export const insertProductsCategorySchema = createInsertSchema(productsCategorie
 
 export type InsertProductsCategory = z.infer<typeof insertProductsCategorySchema>;
 export type ProductsCategory = typeof productsCategories.$inferSelect;
+
+// Expenses Categories table
+export const expensesCategories = pgTable("expenses_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  isActive: boolean("is_active").default(true),
+});
+
+// Expenses Categories validation schemas
+export const insertExpensesCategorySchema = createInsertSchema(expensesCategories).pick({
+  name: true,
+  isActive: true,
+}).extend({
+  name: z.string().min(1, "Category name is required"),
+});
+
+export type InsertExpensesCategory = z.infer<typeof insertExpensesCategorySchema>;
+export type ExpensesCategory = typeof expensesCategories.$inferSelect;
