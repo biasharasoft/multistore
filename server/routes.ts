@@ -9,7 +9,8 @@ import {
   verifyOtpSchema, 
   resetPasswordSchema,
   newPasswordSchema,
-  insertStoreSchema
+  insertStoreSchema,
+  insertRegionSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -232,6 +233,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Region Routes
+  
+  // Get all regions
+  app.get('/api/regions', async (req, res) => {
+    try {
+      const regions = await storage.getAllRegions();
+      res.json(regions);
+    } catch (error) {
+      console.error('Error fetching regions:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch regions' 
+      });
+    }
+  });
+
+  // Get active regions only
+  app.get('/api/regions/active', async (req, res) => {
+    try {
+      const activeRegions = await storage.getActiveRegions();
+      res.json(activeRegions);
+    } catch (error) {
+      console.error('Error fetching active regions:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch active regions' 
+      });
+    }
   });
 
   const httpServer = createServer(app);

@@ -98,6 +98,7 @@ export type NewPasswordData = z.infer<typeof newPasswordSchema>;
 export const stores = pgTable("stores", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  regionId: varchar("region_id").references(() => regions.id, { onDelete: "set null" }),
   name: varchar("name").notNull(),
   manager: varchar("manager"),
   address: text("address").notNull(),
@@ -120,6 +121,7 @@ export const insertStoreSchema = createInsertSchema(stores).pick({
   name: true,
   manager: true,
   address: true,
+  regionId: true,
   city: true,
   state: true,
   zipCode: true,
@@ -130,6 +132,7 @@ export const insertStoreSchema = createInsertSchema(stores).pick({
 }).extend({
   name: z.string().min(1, "Store name is required"),
   address: z.string().min(1, "Address is required"),
+  regionId: z.string().optional(),
 });
 
 export type InsertStore = z.infer<typeof insertStoreSchema>;

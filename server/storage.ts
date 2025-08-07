@@ -1,4 +1,4 @@
-import { users, stores, type User, type InsertUser, type Store, type InsertStore } from "@shared/schema";
+import { users, stores, regions, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -15,6 +15,10 @@ export interface IStorage {
   createStore(store: InsertStore & { userId: string }): Promise<Store>;
   updateStore(id: string, userId: string, updates: Partial<InsertStore>): Promise<Store>;
   deleteStore(id: string, userId: string): Promise<void>;
+  
+  // Region operations
+  getAllRegions(): Promise<Region[]>;
+  getActiveRegions(): Promise<Region[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -94,6 +98,24 @@ export class DatabaseStorage implements IStorage {
     if (result.length === 0) {
       throw new Error("Store not found or you don't have permission to delete it");
     }
+  }
+
+  // Region operations
+  async getAllRegions(): Promise<Region[]> {
+    const allRegions = await db
+      .select()
+      .from(regions)
+      .orderBy(regions.name);
+    return allRegions;
+  }
+
+  async getActiveRegions(): Promise<Region[]> {
+    const activeRegions = await db
+      .select()
+      .from(regions)
+      .where(eq(regions.isActive, true))
+      .orderBy(regions.name);
+    return activeRegions;
   }
 }
 

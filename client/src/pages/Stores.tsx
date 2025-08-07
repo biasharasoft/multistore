@@ -53,6 +53,7 @@ const storeFormSchema = z.object({
   name: z.string().min(1, "Store name is required"),
   manager: z.string().optional(),
   address: z.string().min(1, "Address is required"),
+  regionId: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   zipCode: z.string().optional(),
@@ -67,6 +68,7 @@ type StoreFormData = z.infer<typeof storeFormSchema>;
 interface Store {
   id: string;
   userId: string;
+  regionId: string | null;
   name: string;
   manager: string | null;
   address: string;
@@ -82,6 +84,12 @@ interface Store {
   monthlyGoal: number;
   createdAt: string;
   updatedAt: string;
+}
+
+interface Region {
+  id: string;
+  name: string;
+  isActive: boolean;
 }
 
 // API functions
@@ -138,6 +146,16 @@ const updateStore = async ({ id, ...storeData }: StoreFormData & { id: string })
   return response.json();
 };
 
+const fetchRegions = async (): Promise<Region[]> => {
+  const response = await fetch('/api/regions');
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch regions');
+  }
+
+  return response.json();
+};
+
 const Stores = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -153,6 +171,12 @@ const Stores = () => {
   const { data: stores = [], isLoading, error } = useQuery({
     queryKey: ['/api/stores'],
     queryFn: fetchStores,
+  });
+
+  // Fetch regions query
+  const { data: regions = [] } = useQuery({
+    queryKey: ['/api/regions'],
+    queryFn: fetchRegions,
   });
 
   // Create store mutation
@@ -205,6 +229,7 @@ const Stores = () => {
       name: "",
       manager: "",
       address: "",
+      regionId: "",
       city: "",
       state: "",
       zipCode: "",
@@ -230,6 +255,7 @@ const Stores = () => {
       name: store.name,
       manager: store.manager || "",
       address: store.address,
+      regionId: store.regionId || "",
       city: store.city || "",
       state: store.state || "",
       zipCode: store.zipCode || "",
@@ -356,6 +382,30 @@ const Stores = () => {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="regionId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Region</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-region">
+                              <SelectValue placeholder="Select region" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {regions.map((region) => (
+                              <SelectItem key={region.id} value={region.id}>
+                                {region.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="city"
@@ -537,6 +587,30 @@ const Stores = () => {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="regionId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Region</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-edit-region">
+                              <SelectValue placeholder="Select region" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {regions.map((region) => (
+                              <SelectItem key={region.id} value={region.id}>
+                                {region.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="city"
