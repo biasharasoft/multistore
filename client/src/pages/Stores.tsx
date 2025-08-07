@@ -119,6 +119,25 @@ const createStore = async (storeData: StoreFormData): Promise<Store> => {
   return response.json();
 };
 
+const updateStore = async ({ id, ...storeData }: StoreFormData & { id: string }): Promise<Store> => {
+  const token = localStorage.getItem('auth_token');
+  const response = await fetch(`/api/stores/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(storeData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update store');
+  }
+
+  return response.json();
+};
+
 const Stores = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -126,6 +145,8 @@ const Stores = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [isAddStoreOpen, setIsAddStoreOpen] = useState(false);
+  const [editingStore, setEditingStore] = useState<Store | null>(null);
+  const [isEditStoreOpen, setIsEditStoreOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
   // Fetch stores query
@@ -155,6 +176,28 @@ const Stores = () => {
     },
   });
 
+  // Update store mutation
+  const updateStoreMutation = useMutation({
+    mutationFn: updateStore,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stores'] });
+      setIsEditStoreOpen(false);
+      setEditingStore(null);
+      form.reset();
+      toast({
+        title: "Store updated",
+        description: "The store has been successfully updated.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update store",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Form setup
   const form = useForm<StoreFormData>({
     resolver: zodResolver(storeFormSchema),
@@ -173,7 +216,29 @@ const Stores = () => {
   });
 
   const onSubmit = (data: StoreFormData) => {
-    createStoreMutation.mutate(data);
+    if (editingStore) {
+      updateStoreMutation.mutate({ ...data, id: editingStore.id });
+    } else {
+      createStoreMutation.mutate(data);
+    }
+  };
+
+  // Handle edit store
+  const handleEditStore = (store: Store) => {
+    setEditingStore(store);
+    form.reset({
+      name: store.name,
+      manager: store.manager || "",
+      address: store.address,
+      city: store.city || "",
+      state: store.state || "",
+      zipCode: store.zipCode || "",
+      phone: store.phone || "",
+      email: store.email || "",
+      openTime: store.openTime || "09:00",
+      closeTime: store.closeTime || "21:00",
+    });
+    setIsEditStoreOpen(true);
   };
 
   // Filter stores
@@ -419,6 +484,191 @@ const Stores = () => {
             </Form>
           </DialogContent>
         </Dialog>
+        
+        {/* Edit Store Dialog */}
+        <Dialog open={isEditStoreOpen} onOpenChange={setIsEditStoreOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Store</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Store Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Store name" data-testid="input-edit-store-name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="manager"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Manager</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Manager name" data-testid="input-edit-manager" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address *</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Store address" rows={2} data-testid="input-edit-address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input placeholder="City" data-testid="input-edit-city" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State</FormLabel>
+                        <FormControl>
+                          <Input placeholder="State" data-testid="input-edit-state" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="zipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ZIP Code</FormLabel>
+                        <FormControl>
+                          <Input placeholder="12345" data-testid="input-edit-zipCode" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+1 (555) 123-4567" data-testid="input-edit-phone" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="store@company.com" data-testid="input-edit-email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="openTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Open Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" data-testid="input-edit-openTime" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="closeTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Close Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" data-testid="input-edit-closeTime" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    type="submit" 
+                    className="flex-1" 
+                    disabled={updateStoreMutation.isPending}
+                    data-testid="button-update-store"
+                  >
+                    {updateStoreMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Store"
+                    )}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsEditStoreOpen(false);
+                      setEditingStore(null);
+                      form.reset();
+                    }}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}
@@ -568,7 +818,7 @@ const Stores = () => {
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditStore(store)} data-testid={`button-edit-store-${store.id}`}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Store
                           </DropdownMenuItem>
@@ -660,7 +910,7 @@ const Stores = () => {
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditStore(store)} data-testid={`button-edit-store-table-${store.id}`}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Store
                             </DropdownMenuItem>
