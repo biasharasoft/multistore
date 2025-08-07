@@ -667,17 +667,6 @@ export default function Settings() {
                           placeholder="Enter category name"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="categoryDescription">Description</Label>
-                        <Textarea
-                          id="categoryDescription"
-                          data-testid="textarea-category-description"
-                          value={newCategoryDescription}
-                          onChange={(e) => setNewCategoryDescription(e.target.value)}
-                          placeholder="Enter category description"
-                          rows={3}
-                        />
-                      </div>
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)} data-testid="button-cancel-category">
