@@ -70,7 +70,7 @@ export default function StoreDetail() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-foreground" data-testid="text-store-name">{store.name}</h1>
-          <p className="text-muted-foreground text-lg" data-testid="text-store-tagline">{store.tagline}</p>
+          <p className="text-muted-foreground text-lg" data-testid="text-store-address">{store.address}</p>
         </div>
       </div>
 
