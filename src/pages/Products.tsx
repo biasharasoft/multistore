@@ -1,0 +1,1038 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Search, 
+  Plus, 
+  Package, 
+  AlertTriangle, 
+  TrendingUp, 
+  TrendingDown,
+  Edit,
+  Power,
+  Filter,
+  Grid3x3,
+  List,
+  Barcode,
+  DollarSign,
+  Package2
+} from "lucide-react";
+
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  price: number;
+  cost: number;
+  wholesalerPrice: number;
+  wholesalerDiscount: number;
+  retailPrice: number;
+  retailDiscount: number;
+  stock: number;
+  lowStockThreshold: number;
+  description: string;
+  barcode: string;
+  image?: string;
+  status: "active" | "inactive" | "discontinued";
+}
+
+const mockProducts: Product[] = [
+  {
+    id: "1",
+    name: "Premium Coffee Beans",
+    sku: "COF-001",
+    category: "Beverages",
+    price: 24.99,
+    cost: 12.50,
+    wholesalerPrice: 20.99,
+    wholesalerDiscount: 5,
+    retailPrice: 24.99,
+    retailDiscount: 0,
+    stock: 45,
+    lowStockThreshold: 10,
+    description: "Premium arabica coffee beans from Colombia",
+    barcode: "1234567890123",
+    status: "active"
+  },
+  {
+    id: "2", 
+    name: "Wireless Headphones",
+    sku: "ELE-002",
+    category: "Electronics",
+    price: 199.99,
+    cost: 120.00,
+    wholesalerPrice: 169.99,
+    wholesalerDiscount: 15,
+    retailPrice: 199.99,
+    retailDiscount: 0,
+    stock: 8,
+    lowStockThreshold: 15,
+    description: "High-quality wireless noise-canceling headphones",
+    barcode: "2345678901234",
+    status: "active"
+  },
+  {
+    id: "3",
+    name: "Organic Green Tea",
+    sku: "TEA-003", 
+    category: "Beverages",
+    price: 12.99,
+    cost: 6.00,
+    wholesalerPrice: 10.99,
+    wholesalerDiscount: 15,
+    retailPrice: 12.99,
+    retailDiscount: 0,
+    stock: 23,
+    lowStockThreshold: 20,
+    description: "Organic green tea leaves from Japan",
+    barcode: "3456789012345",
+    status: "active"
+  },
+  {
+    id: "4",
+    name: "Bluetooth Speaker",
+    sku: "ELE-004",
+    category: "Electronics", 
+    price: 89.99,
+    cost: 45.00,
+    wholesalerPrice: 76.99,
+    wholesalerDiscount: 15,
+    retailPrice: 89.99,
+    retailDiscount: 0,
+    stock: 0,
+    lowStockThreshold: 5,
+    description: "Portable bluetooth speaker with waterproof design",
+    barcode: "4567890123456",
+    status: "inactive"
+  },
+  {
+    id: "5",
+    name: "Protein Bars (12 pack)",
+    sku: "SNK-005",
+    category: "Snacks",
+    price: 18.99,
+    cost: 9.50,
+    wholesalerPrice: 16.14,
+    wholesalerDiscount: 15,
+    retailPrice: 18.99,
+    retailDiscount: 0,
+    stock: 67,
+    lowStockThreshold: 25,
+    description: "High-protein energy bars variety pack",
+    barcode: "5678901234567", 
+    status: "active"
+  },
+  {
+    id: "6",
+    name: "Yoga Mat",
+    sku: "FIT-006",
+    category: "Fitness",
+    price: 39.99,
+    cost: 18.00,
+    wholesalerPrice: 33.99,
+    wholesalerDiscount: 15,
+    retailPrice: 39.99,
+    retailDiscount: 0,
+    stock: 12,
+    lowStockThreshold: 8,
+    description: "Non-slip premium yoga mat with carrying strap",
+    barcode: "6789012345678",
+    status: "active"
+  }
+];
+
+const categories = ["All", "Beverages", "Electronics", "Snacks", "Fitness"];
+
+export default function Products() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isEditProductOpen, setIsEditProductOpen] = useState(false);
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [availableCategories, setAvailableCategories] = useState(["Beverages", "Electronics", "Snacks", "Fitness"]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  
+  // Add form state
+  const [addForm, setAddForm] = useState({
+    name: "",
+    sku: "",
+    category: "",
+    price: "",
+    cost: "",
+    wholesalerPrice: "",
+    wholesalerDiscount: "",
+    retailPrice: "",
+    retailDiscount: "",
+    stock: "",
+    lowStockThreshold: "",
+    description: "",
+    barcode: "",
+    status: "active" as "active" | "inactive" | "discontinued"
+  });
+  
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: "",
+    sku: "",
+    category: "",
+    price: "",
+    cost: "",
+    wholesalerPrice: "",
+    wholesalerDiscount: "",
+    retailPrice: "",
+    retailDiscount: "",
+    stock: "",
+    lowStockThreshold: "",
+    description: "",
+    barcode: "",
+    status: "active" as "active" | "inactive" | "discontinued"
+  });
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  // Update categories list to include "All" for filter
+  const filterCategories = ["All", ...availableCategories];
+
+  const lowStockProducts = products.filter(p => p.stock <= p.lowStockThreshold && p.stock > 0);
+  const outOfStockProducts = products.filter(p => p.stock === 0);
+  
+  const totalProducts = products.length;
+  const activeProducts = products.filter(p => p.status === "active").length;
+  const totalValue = products.reduce((sum, p) => sum + (p.stock * p.cost), 0);
+
+  const getStockStatus = (product: Product) => {
+    if (product.stock === 0) return { label: "Out of Stock", variant: "destructive" as const };
+    if (product.stock <= product.lowStockThreshold) return { label: "Low Stock", variant: "secondary" as const };
+    return { label: "In Stock", variant: "default" as const };
+  };
+
+  const handleToggleProductStatus = (product: Product) => {
+    const newStatus: "active" | "inactive" = product.status === "active" ? "inactive" : "active";
+    const updatedProduct = { ...product, status: newStatus };
+    
+    setProducts(products.map(p => p.id === product.id ? updatedProduct : p));
+    
+    toast({
+      title: "Success",
+      description: `Product "${product.name}" has been ${newStatus === "active" ? "activated" : "deactivated"}.`,
+    });
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setEditForm({
+      name: product.name,
+      sku: product.sku,
+      category: product.category,
+      price: product.price.toString(),
+      cost: product.cost.toString(),
+      wholesalerPrice: product.wholesalerPrice.toString(),
+      wholesalerDiscount: product.wholesalerDiscount.toString(),
+      retailPrice: product.retailPrice.toString(),
+      retailDiscount: product.retailDiscount.toString(),
+      stock: product.stock.toString(),
+      lowStockThreshold: product.lowStockThreshold.toString(),
+      description: product.description,
+      barcode: product.barcode,
+      status: product.status
+    });
+    setIsEditProductOpen(true);
+  };
+
+  const handleUpdateProduct = () => {
+    if (!editingProduct) return;
+
+    if (!editForm.name.trim() || !editForm.sku.trim()) {
+      toast({
+        title: "Error",
+        description: "Product name and SKU are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updatedProduct: Product = {
+      ...editingProduct,
+      name: editForm.name.trim(),
+      sku: editForm.sku.trim(),
+      category: editForm.category,
+      price: parseFloat(editForm.price) || 0,
+      cost: parseFloat(editForm.cost) || 0,
+      wholesalerPrice: parseFloat(editForm.wholesalerPrice) || 0,
+      wholesalerDiscount: parseFloat(editForm.wholesalerDiscount) || 0,
+      retailPrice: parseFloat(editForm.retailPrice) || 0,
+      retailDiscount: parseFloat(editForm.retailDiscount) || 0,
+      stock: parseInt(editForm.stock) || 0,
+      lowStockThreshold: parseInt(editForm.lowStockThreshold) || 0,
+      description: editForm.description.trim(),
+      barcode: editForm.barcode.trim(),
+      status: editForm.status
+    };
+
+    setProducts(products.map(p => p.id === editingProduct.id ? updatedProduct : p));
+    setIsEditProductOpen(false);
+    setEditingProduct(null);
+    
+    toast({
+      title: "Success",
+      description: `Product "${updatedProduct.name}" has been updated.`,
+    });
+  };
+
+  const handleAddProduct = () => {
+    if (!addForm.name.trim() || !addForm.sku.trim()) {
+      toast({
+        title: "Error",
+        description: "Product name and SKU are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (products.some(p => p.sku === addForm.sku.trim())) {
+      toast({
+        title: "Error",
+        description: "A product with this SKU already exists.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newProduct: Product = {
+      id: (products.length + 1).toString(),
+      name: addForm.name.trim(),
+      sku: addForm.sku.trim(),
+      category: addForm.category,
+      price: parseFloat(addForm.price) || 0,
+      cost: parseFloat(addForm.cost) || 0,
+      wholesalerPrice: parseFloat(addForm.wholesalerPrice) || 0,
+      wholesalerDiscount: parseFloat(addForm.wholesalerDiscount) || 0,
+      retailPrice: parseFloat(addForm.retailPrice) || 0,
+      retailDiscount: parseFloat(addForm.retailDiscount) || 0,
+      stock: parseInt(addForm.stock) || 0,
+      lowStockThreshold: parseInt(addForm.lowStockThreshold) || 0,
+      description: addForm.description.trim(),
+      barcode: addForm.barcode.trim(),
+      status: addForm.status
+    };
+
+    setProducts([...products, newProduct]);
+    setAddForm({
+      name: "",
+      sku: "",
+      category: "",
+      price: "",
+      cost: "",
+      wholesalerPrice: "",
+      wholesalerDiscount: "",
+      retailPrice: "",
+      retailDiscount: "",
+      stock: "",
+      lowStockThreshold: "",
+      description: "",
+      barcode: "",
+      status: "active"
+    });
+    setIsAddProductOpen(false);
+    
+    toast({
+      title: "Success",
+      description: `Product "${newProduct.name}" has been added.`,
+    });
+  };
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) {
+      toast({
+        title: "Error",
+        description: "Category name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (availableCategories.includes(newCategoryName.trim())) {
+      toast({
+        title: "Error",
+        description: "Category already exists.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newCategory = newCategoryName.trim();
+    setAvailableCategories([...availableCategories, newCategory]);
+    setNewCategoryName("");
+    setIsAddCategoryOpen(false);
+    
+    toast({
+      title: "Success",
+      description: `Category "${newCategory}" has been added.`,
+    });
+  };
+
+  const ProductCard = ({ product }: { product: Product }) => {
+    const stockStatus = getStockStatus(product);
+    const margin = ((product.price - product.cost) / product.price * 100).toFixed(1);
+
+    return (
+      <Card className="group hover:shadow-md transition-all duration-200">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <CardTitle 
+                className="text-lg line-clamp-1 cursor-pointer hover:text-primary transition-colors"
+                onClick={() => navigate(`/products/${product.id}`)}
+              >
+                {product.name}
+              </CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                SKU: {product.sku} • {product.category}
+              </CardDescription>
+            </div>
+            <Badge variant={stockStatus.variant} className="text-xs">
+              {stockStatus.label}
+            </Badge>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">Price</p>
+              <p className="font-semibold text-primary">${product.price}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Stock</p>
+              <p className="font-semibold">{product.stock} units</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Cost</p>
+              <p className="font-semibold">${product.cost}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Margin</p>
+              <p className="font-semibold text-green-600">{margin}%</p>
+            </div>
+          </div>
+
+          {product.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {product.description}
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditProduct(product)}>
+              <Edit className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button 
+              variant={product.status === "active" ? "outline" : "default"} 
+              size="sm"
+              onClick={() => handleToggleProductStatus(product)}
+              className={product.status === "active" ? "" : "bg-green-600 hover:bg-green-700"}
+            >
+              <Power className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const ProductListRow = ({ product }: { product: Product }) => {
+    const stockStatus = getStockStatus(product);
+    const margin = ((product.price - product.cost) / product.price * 100).toFixed(1);
+
+    return (
+      <div className="grid grid-cols-8 gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors items-center">
+        <div className="col-span-2">
+          <p 
+            className="font-medium cursor-pointer hover:text-primary transition-colors"
+            onClick={() => navigate(`/products/${product.id}`)}
+          >
+            {product.name}
+          </p>
+          <p className="text-sm text-muted-foreground">{product.sku}</p>
+        </div>
+        <div className="text-center">
+          <Badge variant="outline">{product.category}</Badge>
+        </div>
+        <div className="text-center font-semibold text-primary">
+          ${product.price}
+        </div>
+        <div className="text-center">
+          ${product.cost}
+        </div>
+        <div className="text-center">
+          <Badge variant={stockStatus.variant}>
+            {product.stock} units
+          </Badge>
+        </div>
+        <div className="text-center text-green-600 font-medium">
+          {margin}%
+        </div>
+        <div className="flex gap-1 justify-center">
+          <Button variant="ghost" size="sm" onClick={() => handleEditProduct(product)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => handleToggleProductStatus(product)}
+            className={product.status === "active" ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"}
+          >
+            <Power className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Products</h1>
+          <p className="text-muted-foreground">Manage your product inventory and catalog</p>
+        </div>
+        
+        <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Product
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add New Product</DialogTitle>
+              <DialogDescription>
+                Create a new product in your inventory
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div>
+                <Label htmlFor="name">Product Name</Label>
+                <Input 
+                  id="name" 
+                  value={addForm.name}
+                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                  placeholder="Enter product name" 
+                />
+              </div>
+              <div>
+                <Label htmlFor="sku">SKU</Label>
+                <Input 
+                  id="sku" 
+                  value={addForm.sku}
+                  onChange={(e) => setAddForm({ ...addForm, sku: e.target.value })}
+                  placeholder="Product SKU" 
+                />
+              </div>
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <div className="flex gap-2">
+                  <Select value={addForm.category} onValueChange={(value) => setAddForm({ ...addForm, category: value })}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCategories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="icon" type="button">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Add New Category</DialogTitle>
+                        <DialogDescription>
+                          Create a new product category for your inventory.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="newCategoryName">Category Name</Label>
+                          <Input
+                            id="newCategoryName"
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="Enter category name"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={handleAddCategory}>
+                          Add Category
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="barcode">Barcode</Label>
+                <Input 
+                  id="barcode" 
+                  value={addForm.barcode}
+                  onChange={(e) => setAddForm({ ...addForm, barcode: e.target.value })}
+                  placeholder="Product barcode" 
+                />
+              </div>
+              <div className="col-span-2 mb-4">
+                <Label htmlFor="cost">Cost Price ($)</Label>
+                <Input 
+                  id="cost" 
+                  type="number" 
+                  step="0.01" 
+                  value={addForm.cost}
+                  onChange={(e) => setAddForm({ ...addForm, cost: e.target.value })}
+                  placeholder="0.00"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <Label htmlFor="wholesalerPrice">Wholesaler Price ($)</Label>
+                <Input 
+                  id="wholesalerPrice" 
+                  type="number" 
+                  step="0.01" 
+                  value={addForm.wholesalerPrice}
+                  onChange={(e) => setAddForm({ ...addForm, wholesalerPrice: e.target.value })}
+                  placeholder="0.00" 
+                />
+              </div>
+              <div>
+                <Label htmlFor="wholesalerDiscount">Wholesaler Discount (%)</Label>
+                <Input 
+                  id="wholesalerDiscount" 
+                  type="number" 
+                  step="0.01" 
+                  value={addForm.wholesalerDiscount}
+                  onChange={(e) => setAddForm({ ...addForm, wholesalerDiscount: e.target.value })}
+                  placeholder="0.00" 
+                />
+              </div>
+              <div>
+                <Label htmlFor="retailPrice">Retail Price ($)</Label>
+                <Input 
+                  id="retailPrice" 
+                  type="number" 
+                  step="0.01" 
+                  value={addForm.retailPrice}
+                  onChange={(e) => setAddForm({ ...addForm, retailPrice: e.target.value })}
+                  placeholder="0.00" 
+                />
+              </div>
+              <div>
+                <Label htmlFor="retailDiscount">Retail Discount (%)</Label>
+                <Input 
+                  id="retailDiscount" 
+                  type="number" 
+                  step="0.01" 
+                  value={addForm.retailDiscount}
+                  onChange={(e) => setAddForm({ ...addForm, retailDiscount: e.target.value })}
+                  placeholder="0.00" 
+                />
+              </div>
+              <div>
+                <Label htmlFor="stock">Initial Stock</Label>
+                <Input 
+                  id="stock" 
+                  type="number" 
+                  value={addForm.stock}
+                  onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
+                  placeholder="0" 
+                />
+              </div>
+              <div>
+                <Label htmlFor="threshold">Low Stock Alert</Label>
+                <Input 
+                  id="threshold" 
+                  type="number" 
+                  value={addForm.lowStockThreshold}
+                  onChange={(e) => setAddForm({ ...addForm, lowStockThreshold: e.target.value })}
+                  placeholder="5" 
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea 
+                  id="description" 
+                  value={addForm.description}
+                  onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+                  placeholder="Product description" 
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsAddProductOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddProduct}>
+                Add Product
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Products</p>
+                <p className="text-2xl font-bold">{totalProducts}</p>
+              </div>
+              <Package className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Active Products</p>
+                <p className="text-2xl font-bold">{activeProducts}</p>
+              </div>
+              <Package2 className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Low Stock Alerts</p>
+                <p className="text-2xl font-bold text-orange-600">{lowStockProducts.length}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Inventory Value</p>
+                <p className="text-2xl font-bold">${totalValue.toLocaleString()}</p>
+              </div>
+              <DollarSign className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters and Search */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-1 gap-4 items-center w-full sm:w-auto">
+              <div className="relative flex-1 sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-48">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filterCategories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid3x3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Alerts */}
+      {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {lowStockProducts.length > 0 && (
+            <Card className="border-orange-200 bg-orange-50/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-orange-800 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Low Stock Alerts ({lowStockProducts.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {lowStockProducts.slice(0, 3).map(product => (
+                    <div key={product.id} className="flex justify-between items-center text-sm">
+                      <span>{product.name}</span>
+                      <Badge variant="secondary">{product.stock} left</Badge>
+                    </div>
+                  ))}
+                  {lowStockProducts.length > 3 && (
+                    <p className="text-xs text-muted-foreground">
+                      +{lowStockProducts.length - 3} more items
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {outOfStockProducts.length > 0 && (
+            <Card className="border-red-200 bg-red-50/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-red-800 flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Out of Stock ({outOfStockProducts.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {outOfStockProducts.slice(0, 3).map(product => (
+                    <div key={product.id} className="flex justify-between items-center text-sm">
+                      <span>{product.name}</span>
+                      <Badge variant="destructive">0 stock</Badge>
+                    </div>
+                  ))}
+                  {outOfStockProducts.length > 3 && (
+                    <p className="text-xs text-muted-foreground">
+                      +{outOfStockProducts.length - 3} more items
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Products Display */}
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProducts.map(product => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <div className="grid grid-cols-8 gap-4 text-sm font-medium text-muted-foreground">
+              <div className="col-span-2">Product</div>
+              <div className="text-center">Category</div>
+              <div className="text-center">Price</div>
+              <div className="text-center">Cost</div>
+              <div className="text-center">Stock</div>
+              <div className="text-center">Margin</div>
+              <div className="text-center">Actions</div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {filteredProducts.map(product => (
+              <ProductListRow key={product.id} product={product} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {filteredProducts.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
+            <p className="text-muted-foreground">
+              {searchTerm || selectedCategory !== "All" 
+                ? "Try adjusting your search or filter criteria"
+                : "Get started by adding your first product"
+              }
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>
+              Update product information and settings
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div>
+              <Label htmlFor="editName">Product Name</Label>
+              <Input
+                id="editName"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Enter product name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editSku">SKU</Label>
+              <Input
+                id="editSku"
+                value={editForm.sku}
+                onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })}
+                placeholder="Product SKU"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editCategory">Category</Label>
+              <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCategories.map(category => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="editBarcode">Barcode</Label>
+              <Input
+                id="editBarcode"
+                value={editForm.barcode}
+                onChange={(e) => setEditForm({ ...editForm, barcode: e.target.value })}
+                placeholder="Product barcode"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editPrice">Selling Price ($)</Label>
+              <Input
+                id="editPrice"
+                type="number"
+                step="0.01"
+                value={editForm.price}
+                onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editCost">Cost Price ($)</Label>
+              <Input
+                id="editCost"
+                type="number"
+                step="0.01"
+                value={editForm.cost}
+                onChange={(e) => setEditForm({ ...editForm, cost: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editStock">Stock Quantity</Label>
+              <Input
+                id="editStock"
+                type="number"
+                value={editForm.stock}
+                onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editThreshold">Low Stock Alert</Label>
+              <Input
+                id="editThreshold"
+                type="number"
+                value={editForm.lowStockThreshold}
+                onChange={(e) => setEditForm({ ...editForm, lowStockThreshold: e.target.value })}
+                placeholder="5"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editStatus">Status</Label>
+              <Select value={editForm.status} onValueChange={(value: "active" | "inactive" | "discontinued") => setEditForm({ ...editForm, status: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="discontinued">Discontinued</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="editDescription">Description</Label>
+              <Textarea
+                id="editDescription"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Product description"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditProductOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateProduct}>
+              Update Product
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
