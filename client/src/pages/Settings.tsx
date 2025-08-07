@@ -165,19 +165,11 @@ export default function Settings() {
       return;
     }
 
-    if (categoryType === "products") {
-      createProductsCategoryMutation.mutate({
-        name: newCategoryName.trim(),
-        isActive: true,
-      });
-    } else {
-      // For expense categories, we'll just show a toast since we haven't implemented that yet
-      toast({
-        title: "Not Implemented",
-        description: "Expense categories are not yet supported.",
-        variant: "destructive",
-      });
-    }
+    // Save both product and expense categories to products_categories table
+    createProductsCategoryMutation.mutate({
+      name: newCategoryName.trim(),
+      isActive: true,
+    });
   };
 
   const handleEditCategory = (category: any) => {
