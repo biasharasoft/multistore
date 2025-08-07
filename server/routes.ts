@@ -12,7 +12,8 @@ import {
   insertStoreSchema,
   insertRegionSchema,
   insertProductsCategorySchema,
-  insertExpensesCategorySchema
+  insertExpensesCategorySchema,
+  insertProductSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -445,6 +446,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting expenses category:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to delete expenses category' 
+      });
+    }
+  });
+
+  // Products Routes
+  
+  // Get all products
+  app.get('/api/products', async (req, res) => {
+    try {
+      const products = await storage.getAllProducts();
+      res.json(products);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch products' 
+      });
+    }
+  });
+
+  // Get active products only
+  app.get('/api/products/active', async (req, res) => {
+    try {
+      const activeProducts = await storage.getActiveProducts();
+      res.json(activeProducts);
+    } catch (error) {
+      console.error('Error fetching active products:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch active products' 
+      });
+    }
+  });
+
+  // Get low stock products
+  app.get('/api/products/low-stock', async (req, res) => {
+    try {
+      const lowStockProducts = await storage.getLowStockProducts();
+      res.json(lowStockProducts);
+    } catch (error) {
+      console.error('Error fetching low stock products:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch low stock products' 
+      });
+    }
+  });
+
+  // Get out of stock products
+  app.get('/api/products/out-of-stock', async (req, res) => {
+    try {
+      const outOfStockProducts = await storage.getOutOfStockProducts();
+      res.json(outOfStockProducts);
+    } catch (error) {
+      console.error('Error fetching out of stock products:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch out of stock products' 
+      });
+    }
+  });
+
+  // Get products by category
+  app.get('/api/products/category/:categoryId', async (req, res) => {
+    try {
+      const { categoryId } = req.params;
+      const categoryProducts = await storage.getProductsByCategory(categoryId);
+      res.json(categoryProducts);
+    } catch (error) {
+      console.error('Error fetching products by category:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch products by category' 
+      });
+    }
+  });
+
+  // Get a specific product by ID
+  app.get('/api/products/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const product = await storage.getProductById(id);
+      
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch product' 
+      });
+    }
+  });
+
+  // Create a new product
+  app.post('/api/products', async (req, res) => {
+    try {
+      // Convert dollar amounts to cents for storage
+      const productData = {
+        ...req.body,
+        price: Math.round((req.body.price || 0) * 100),
+        cost: Math.round((req.body.cost || 0) * 100),
+        wholesalerPrice: Math.round((req.body.wholesalerPrice || 0) * 100),
+        wholesalerDiscount: Math.round((req.body.wholesalerDiscount || 0) * 100),
+        retailPrice: Math.round((req.body.retailPrice || 0) * 100),
+        retailDiscount: Math.round((req.body.retailDiscount || 0) * 100),
+      };
+      
+      const validatedData = insertProductSchema.parse(productData);
+      const newProduct = await storage.createProduct(validatedData);
+      
+      res.status(201).json(newProduct);
+    } catch (error) {
+      console.error('Error creating product:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to create product' 
+      });
+    }
+  });
+
+  // Update a product
+  app.put('/api/products/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Convert dollar amounts to cents for storage if they exist in the update
+      const updates = { ...req.body };
+      if (updates.price !== undefined) updates.price = Math.round(updates.price * 100);
+      if (updates.cost !== undefined) updates.cost = Math.round(updates.cost * 100);
+      if (updates.wholesalerPrice !== undefined) updates.wholesalerPrice = Math.round(updates.wholesalerPrice * 100);
+      if (updates.wholesalerDiscount !== undefined) updates.wholesalerDiscount = Math.round(updates.wholesalerDiscount * 100);
+      if (updates.retailPrice !== undefined) updates.retailPrice = Math.round(updates.retailPrice * 100);
+      if (updates.retailDiscount !== undefined) updates.retailDiscount = Math.round(updates.retailDiscount * 100);
+      
+      const validatedUpdates = insertProductSchema.partial().parse(updates);
+      const updatedProduct = await storage.updateProduct(id, validatedUpdates);
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error('Error updating product:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update product' 
+      });
+    }
+  });
+
+  // Delete a product
+  app.delete('/api/products/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteProduct(id);
+      res.json({ message: 'Product deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to delete product' 
       });
     }
   });

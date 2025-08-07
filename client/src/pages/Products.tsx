@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { type Product as DbProduct, type InsertProduct, type ProductsCategory } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,17 +30,19 @@ import {
   Package2
 } from "lucide-react";
 
+// Extended Product type for frontend with converted prices
 interface Product {
   id: string;
   name: string;
   sku: string;
   category: string;
-  price: number;
-  cost: number;
-  wholesalerPrice: number;
-  wholesalerDiscount: number;
-  retailPrice: number;
-  retailDiscount: number;
+  categoryId?: string;
+  price: number; // in dollars
+  cost: number; // in dollars
+  wholesalerPrice: number; // in dollars
+  wholesalerDiscount: number; // as percentage
+  retailPrice: number; // in dollars
+  retailDiscount: number; // as percentage
   stock: number;
   lowStockThreshold: number;
   description: string;
@@ -46,117 +51,49 @@ interface Product {
   status: "active" | "inactive" | "discontinued";
 }
 
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "Premium Coffee Beans",
-    sku: "COF-001",
-    category: "Beverages",
-    price: 24.99,
-    cost: 12.50,
-    wholesalerPrice: 20.99,
-    wholesalerDiscount: 5,
-    retailPrice: 24.99,
-    retailDiscount: 0,
-    stock: 45,
-    lowStockThreshold: 10,
-    description: "Premium arabica coffee beans from Colombia",
-    barcode: "1234567890123",
-    status: "active"
-  },
-  {
-    id: "2", 
-    name: "Wireless Headphones",
-    sku: "ELE-002",
-    category: "Electronics",
-    price: 199.99,
-    cost: 120.00,
-    wholesalerPrice: 169.99,
-    wholesalerDiscount: 15,
-    retailPrice: 199.99,
-    retailDiscount: 0,
-    stock: 8,
-    lowStockThreshold: 15,
-    description: "High-quality wireless noise-canceling headphones",
-    barcode: "2345678901234",
-    status: "active"
-  },
-  {
-    id: "3",
-    name: "Organic Green Tea",
-    sku: "TEA-003", 
-    category: "Beverages",
-    price: 12.99,
-    cost: 6.00,
-    wholesalerPrice: 10.99,
-    wholesalerDiscount: 15,
-    retailPrice: 12.99,
-    retailDiscount: 0,
-    stock: 23,
-    lowStockThreshold: 20,
-    description: "Organic green tea leaves from Japan",
-    barcode: "3456789012345",
-    status: "active"
-  },
-  {
-    id: "4",
-    name: "Bluetooth Speaker",
-    sku: "ELE-004",
-    category: "Electronics", 
-    price: 89.99,
-    cost: 45.00,
-    wholesalerPrice: 76.99,
-    wholesalerDiscount: 15,
-    retailPrice: 89.99,
-    retailDiscount: 0,
-    stock: 0,
-    lowStockThreshold: 5,
-    description: "Portable bluetooth speaker with waterproof design",
-    barcode: "4567890123456",
-    status: "inactive"
-  },
-  {
-    id: "5",
-    name: "Protein Bars (12 pack)",
-    sku: "SNK-005",
-    category: "Snacks",
-    price: 18.99,
-    cost: 9.50,
-    wholesalerPrice: 16.14,
-    wholesalerDiscount: 15,
-    retailPrice: 18.99,
-    retailDiscount: 0,
-    stock: 67,
-    lowStockThreshold: 25,
-    description: "High-protein energy bars variety pack",
-    barcode: "5678901234567", 
-    status: "active"
-  },
-  {
-    id: "6",
-    name: "Yoga Mat",
-    sku: "FIT-006",
-    category: "Fitness",
-    price: 39.99,
-    cost: 18.00,
-    wholesalerPrice: 33.99,
-    wholesalerDiscount: 15,
-    retailPrice: 39.99,
-    retailDiscount: 0,
-    stock: 12,
-    lowStockThreshold: 8,
-    description: "Non-slip premium yoga mat with carrying strap",
-    barcode: "6789012345678",
-    status: "active"
-  }
-];
+// Helper function to convert database product to frontend product
+const convertDbProductToFrontend = (dbProduct: DbProduct, categories: ProductsCategory[]): Product => {
+  const category = categories.find(c => c.id === dbProduct.categoryId);
+  return {
+    id: dbProduct.id,
+    name: dbProduct.name,
+    sku: dbProduct.sku,
+    categoryId: dbProduct.categoryId || undefined,
+    category: category?.name || "Uncategorized",
+    price: (dbProduct.price || 0) / 100, // Convert cents to dollars
+    cost: (dbProduct.cost || 0) / 100,
+    wholesalerPrice: (dbProduct.wholesalerPrice || 0) / 100,
+    wholesalerDiscount: (dbProduct.wholesalerDiscount || 0) / 100, // Convert to percentage
+    retailPrice: (dbProduct.retailPrice || 0) / 100,
+    retailDiscount: (dbProduct.retailDiscount || 0) / 100,
+    stock: dbProduct.stock,
+    lowStockThreshold: dbProduct.lowStockThreshold,
+    description: dbProduct.description || "",
+    barcode: dbProduct.barcode || "",
+    image: dbProduct.image || undefined,
+    status: dbProduct.status as "active" | "inactive" | "discontinued",
+  };
+};
 
-const categories = ["All", "Beverages", "Electronics", "Snacks", "Fitness"];
+
 
 export default function Products() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  
+  // API Queries
+  const { data: dbProducts = [], isLoading: isLoadingProducts } = useQuery<DbProduct[]>({
+    queryKey: ['/api/products'],
+  });
+  
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery<ProductsCategory[]>({
+    queryKey: ['/api/products-categories'],
+  });
+  
+  // Convert database products to frontend format
+  const products = dbProducts.map(dbProduct => convertDbProductToFrontend(dbProduct, categories));
+  
+  // State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -164,8 +101,11 @@ export default function Products() {
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [availableCategories, setAvailableCategories] = useState(["Beverages", "Electronics", "Snacks", "Fitness"]);
   const [newCategoryName, setNewCategoryName] = useState("");
+  
+  // Available categories for dropdowns
+  const availableCategories = categories.filter(cat => cat.isActive).map(cat => cat.name);
+  const filterCategories = ["All", ...availableCategories];
   
   // Add form state
   const [addForm, setAddForm] = useState({
@@ -210,8 +150,6 @@ export default function Products() {
     return matchesSearch && matchesCategory;
   });
 
-  // Update categories list to include "All" for filter
-  const filterCategories = ["All", ...availableCategories];
 
   const lowStockProducts = products.filter(p => p.stock <= p.lowStockThreshold && p.stock > 0);
   const outOfStockProducts = products.filter(p => p.stock === 0);
@@ -226,15 +164,74 @@ export default function Products() {
     return { label: "In Stock", variant: "default" as const };
   };
 
+  // Product mutations
+  const createProductMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest('/api/products', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      setIsAddProductOpen(false);
+      setAddForm({
+        name: "", sku: "", category: "", price: "", cost: "", wholesalerPrice: "",
+        wholesalerDiscount: "", retailPrice: "", retailDiscount: "", stock: "",
+        lowStockThreshold: "", description: "", barcode: "", status: "active"
+      });
+      toast({ title: "Success", description: "Product has been added successfully." });
+    },
+    onError: (error) => {
+      console.error('Error creating product:', error);
+      toast({ title: "Error", description: "Failed to create product. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest(`/api/products/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      setIsEditProductOpen(false);
+      setEditingProduct(null);
+      toast({ title: "Success", description: "Product has been updated successfully." });
+    },
+    onError: (error) => {
+      console.error('Error updating product:', error);
+      toast({ title: "Error", description: "Failed to update product. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: { name: string; isActive: boolean }) => {
+      return await apiRequest('/api/products-categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products-categories'] });
+      setNewCategoryName("");
+      setIsAddCategoryOpen(false);
+      toast({ title: "Success", description: "Category has been added successfully." });
+    },
+    onError: (error) => {
+      console.error('Error creating category:', error);
+      toast({ title: "Error", description: "Failed to create category. Please try again.", variant: "destructive" });
+    },
+  });
+
   const handleToggleProductStatus = (product: Product) => {
     const newStatus: "active" | "inactive" = product.status === "active" ? "inactive" : "active";
-    const updatedProduct = { ...product, status: newStatus };
     
-    setProducts(products.map(p => p.id === product.id ? updatedProduct : p));
-    
-    toast({
-      title: "Success",
-      description: `Product "${product.name}" has been ${newStatus === "active" ? "activated" : "deactivated"}.`,
+    updateProductMutation.mutate({
+      id: product.id,
+      data: { status: newStatus }
     });
   };
 
@@ -289,13 +286,24 @@ export default function Products() {
       status: editForm.status
     };
 
-    setProducts(products.map(p => p.id === editingProduct.id ? updatedProduct : p));
-    setIsEditProductOpen(false);
-    setEditingProduct(null);
-    
-    toast({
-      title: "Success",
-      description: `Product "${updatedProduct.name}" has been updated.`,
+    updateProductMutation.mutate({
+      id: editingProduct.id,
+      data: {
+        name: editForm.name,
+        sku: editForm.sku,
+        categoryId: categories.find(c => c.name === editForm.category)?.id,
+        price: parseFloat(editForm.price) || 0,
+        cost: parseFloat(editForm.cost) || 0,
+        wholesalerPrice: parseFloat(editForm.wholesalerPrice) || 0,
+        wholesalerDiscount: parseFloat(editForm.wholesalerDiscount) || 0,
+        retailPrice: parseFloat(editForm.retailPrice) || 0,
+        retailDiscount: parseFloat(editForm.retailDiscount) || 0,
+        stock: parseInt(editForm.stock) || 0,
+        lowStockThreshold: parseInt(editForm.lowStockThreshold) || 5,
+        description: editForm.description,
+        barcode: editForm.barcode,
+        status: editForm.status
+      }
     });
   };
 
@@ -318,11 +326,10 @@ export default function Products() {
       return;
     }
 
-    const newProduct: Product = {
-      id: (products.length + 1).toString(),
-      name: addForm.name.trim(),
-      sku: addForm.sku.trim(),
-      category: addForm.category,
+    createProductMutation.mutate({
+      name: addForm.name,
+      sku: addForm.sku,
+      categoryId: categories.find(c => c.name === addForm.category)?.id,
       price: parseFloat(addForm.price) || 0,
       cost: parseFloat(addForm.cost) || 0,
       wholesalerPrice: parseFloat(addForm.wholesalerPrice) || 0,
@@ -330,34 +337,10 @@ export default function Products() {
       retailPrice: parseFloat(addForm.retailPrice) || 0,
       retailDiscount: parseFloat(addForm.retailDiscount) || 0,
       stock: parseInt(addForm.stock) || 0,
-      lowStockThreshold: parseInt(addForm.lowStockThreshold) || 0,
-      description: addForm.description.trim(),
-      barcode: addForm.barcode.trim(),
+      lowStockThreshold: parseInt(addForm.lowStockThreshold) || 5,
+      description: addForm.description,
+      barcode: addForm.barcode,
       status: addForm.status
-    };
-
-    setProducts([...products, newProduct]);
-    setAddForm({
-      name: "",
-      sku: "",
-      category: "",
-      price: "",
-      cost: "",
-      wholesalerPrice: "",
-      wholesalerDiscount: "",
-      retailPrice: "",
-      retailDiscount: "",
-      stock: "",
-      lowStockThreshold: "",
-      description: "",
-      barcode: "",
-      status: "active"
-    });
-    setIsAddProductOpen(false);
-    
-    toast({
-      title: "Success",
-      description: `Product "${newProduct.name}" has been added.`,
     });
   };
 
@@ -380,14 +363,9 @@ export default function Products() {
       return;
     }
 
-    const newCategory = newCategoryName.trim();
-    setAvailableCategories([...availableCategories, newCategory]);
-    setNewCategoryName("");
-    setIsAddCategoryOpen(false);
-    
-    toast({
-      title: "Success",
-      description: `Category "${newCategory}" has been added.`,
+    createCategoryMutation.mutate({
+      name: newCategoryName.trim(),
+      isActive: true
     });
   };
 

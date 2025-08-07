@@ -1,6 +1,6 @@
-import { users, stores, regions, productsCategories, expensesCategories, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory } from "@shared/schema";
+import { users, stores, regions, productsCategories, expensesCategories, products, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -35,6 +35,18 @@ export interface IStorage {
   createExpensesCategory(category: InsertExpensesCategory): Promise<ExpensesCategory>;
   updateExpensesCategory(id: string, updates: Partial<InsertExpensesCategory>): Promise<ExpensesCategory>;
   deleteExpensesCategory(id: string): Promise<void>;
+  
+  // Products operations
+  getAllProducts(): Promise<Product[]>;
+  getActiveProducts(): Promise<Product[]>;
+  getProductById(id: string): Promise<Product | undefined>;
+  getProductBySku(sku: string): Promise<Product | undefined>;
+  getProductsByCategory(categoryId: string): Promise<Product[]>;
+  getLowStockProducts(): Promise<Product[]>;
+  getOutOfStockProducts(): Promise<Product[]>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product>;
+  deleteProduct(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -249,6 +261,110 @@ export class DatabaseStorage implements IStorage {
     
     if (result.length === 0) {
       throw new Error("Category not found");
+    }
+  }
+
+  // Products operations
+  async getAllProducts(): Promise<Product[]> {
+    const allProducts = await db
+      .select()
+      .from(products)
+      .orderBy(products.name);
+    return allProducts;
+  }
+
+  async getActiveProducts(): Promise<Product[]> {
+    const activeProducts = await db
+      .select()
+      .from(products)
+      .where(eq(products.status, "active"))
+      .orderBy(products.name);
+    return activeProducts;
+  }
+
+  async getProductById(id: string): Promise<Product | undefined> {
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.id, id));
+    return product || undefined;
+  }
+
+  async getProductBySku(sku: string): Promise<Product | undefined> {
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.sku, sku));
+    return product || undefined;
+  }
+
+  async getProductsByCategory(categoryId: string): Promise<Product[]> {
+    const categoryProducts = await db
+      .select()
+      .from(products)
+      .where(eq(products.categoryId, categoryId))
+      .orderBy(products.name);
+    return categoryProducts;
+  }
+
+  async getLowStockProducts(): Promise<Product[]> {
+    const lowStockProducts = await db
+      .select()
+      .from(products)
+      .where(and(
+        eq(products.status, "active"),
+        sql`${products.stock} <= ${products.lowStockThreshold}`,
+        sql`${products.stock} > 0`
+      ))
+      .orderBy(products.stock);
+    return lowStockProducts;
+  }
+
+  async getOutOfStockProducts(): Promise<Product[]> {
+    const outOfStockProducts = await db
+      .select()
+      .from(products)
+      .where(and(
+        eq(products.status, "active"),
+        eq(products.stock, 0)
+      ))
+      .orderBy(products.name);
+    return outOfStockProducts;
+  }
+
+  async createProduct(productData: InsertProduct): Promise<Product> {
+    const [product] = await db
+      .insert(products)
+      .values(productData)
+      .returning();
+    return product;
+  }
+
+  async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product> {
+    const [product] = await db
+      .update(products)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(products.id, id))
+      .returning();
+    
+    if (!product) {
+      throw new Error("Product not found");
+    }
+    
+    return product;
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    const result = await db
+      .delete(products)
+      .where(eq(products.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Product not found");
     }
   }
 }
