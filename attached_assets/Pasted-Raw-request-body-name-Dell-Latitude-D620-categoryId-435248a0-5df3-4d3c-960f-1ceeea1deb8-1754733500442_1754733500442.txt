@@ -1,0 +1,70 @@
+Raw request body: {
+  name: 'Dell Latitude D620',
+  categoryId: '435248a0-5df3-4d3c-960f-1ceeea1deb87',
+  price: 0,
+  cost: 30000000,
+  wholesalerPrice: 40000000,
+  wholesalerDiscount: 1000,
+  retailPrice: 50000000,
+  retailDiscount: 1000,
+  stock: 0,
+  lowStockThreshold: 8,
+  description: 'The dell',
+  barcode: '2871635170',
+  status: 'active'
+}
+Processed product data: {
+  name: 'Dell Latitude D620',
+  categoryId: '435248a0-5df3-4d3c-960f-1ceeea1deb87',
+  price: 0,
+  cost: 3000000000,
+  wholesalerPrice: 4000000000,
+  wholesalerDiscount: 1000,
+  retailPrice: 5000000000,
+  retailDiscount: 1000,
+  stock: 0,
+  lowStockThreshold: 8,
+  description: 'The dell',
+  barcode: '2871635170',
+  status: 'active'
+}
+Validated data: {
+  name: 'Dell Latitude D620',
+  categoryId: '435248a0-5df3-4d3c-960f-1ceeea1deb87',
+  price: 0,
+  cost: 3000000000,
+  wholesalerPrice: 4000000000,
+  wholesalerDiscount: 1000,
+  retailPrice: 5000000000,
+  retailDiscount: 1000,
+  stock: 0,
+  lowStockThreshold: 8,
+  description: 'The dell',
+  barcode: '2871635170',
+  status: 'active'
+}
+Error creating product: error: value "3000000000" is out of range for type integer
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.createProduct (/home/runner/workspace/server/storage.ts:336:23)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:561:26) {
+  length: 153,
+  severity: 'ERROR',
+  code: '22003',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $4 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'numutils.c',
+  line: '611',
+  routine: 'pg_strtoint32_safe'
+}
+9:56:57 AM [express] POST /api/products 400 in 58ms :: {"message":"value \"3000000000\" is out of ra…

@@ -542,15 +542,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Raw request body:', req.body);
       
-      // Convert dollar amounts to cents for storage (discounts are already converted on frontend)
+      // All conversions are already handled on frontend (dollars to cents, percentages to storage format)
       const productData = {
         ...req.body,
-        price: Math.round((parseFloat(req.body.price) || 0) * 100),
-        cost: Math.round((parseFloat(req.body.cost) || 0) * 100),
-        wholesalerPrice: Math.round((parseFloat(req.body.wholesalerPrice) || 0) * 100),
-        wholesalerDiscount: parseInt(req.body.wholesalerDiscount) || 0, // Already converted on frontend
-        retailPrice: Math.round((parseFloat(req.body.retailPrice) || 0) * 100),
-        retailDiscount: parseInt(req.body.retailDiscount) || 0, // Already converted on frontend
+        price: parseInt(req.body.price) || 0,
+        cost: parseInt(req.body.cost) || 0,
+        wholesalerPrice: parseInt(req.body.wholesalerPrice) || 0,
+        wholesalerDiscount: parseInt(req.body.wholesalerDiscount) || 0,
+        retailPrice: parseInt(req.body.retailPrice) || 0,
+        retailDiscount: parseInt(req.body.retailDiscount) || 0,
       };
       
       console.log('Processed product data:', productData);
@@ -574,15 +574,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
-      // Convert dollar amounts to cents for storage if they exist in the update (discounts already converted on frontend)
+      // All conversions are already handled on frontend, just ensure proper integer types
       const updates = { ...req.body };
-      if (updates.price !== undefined) updates.price = Math.round((parseFloat(updates.price) || 0) * 100);
-      if (updates.cost !== undefined) updates.cost = Math.round((parseFloat(updates.cost) || 0) * 100);
-      if (updates.wholesalerPrice !== undefined) updates.wholesalerPrice = Math.round((parseFloat(updates.wholesalerPrice) || 0) * 100);
-      if (updates.retailPrice !== undefined) updates.retailPrice = Math.round((parseFloat(updates.retailPrice) || 0) * 100);
+      if (updates.price !== undefined) updates.price = parseInt(updates.price) || 0;
+      if (updates.cost !== undefined) updates.cost = parseInt(updates.cost) || 0;
+      if (updates.wholesalerPrice !== undefined) updates.wholesalerPrice = parseInt(updates.wholesalerPrice) || 0;
+      if (updates.retailPrice !== undefined) updates.retailPrice = parseInt(updates.retailPrice) || 0;
       if (updates.wholesalerDiscount !== undefined) updates.wholesalerDiscount = parseInt(updates.wholesalerDiscount) || 0;
       if (updates.retailDiscount !== undefined) updates.retailDiscount = parseInt(updates.retailDiscount) || 0;
-      // Discounts are already converted on frontend, no additional conversion needed
       
       const validatedUpdates = insertProductSchema.partial().parse(updates);
       const updatedProduct = await storage.updateProduct(id, validatedUpdates);
