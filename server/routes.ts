@@ -540,18 +540,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new product
   app.post('/api/products', async (req, res) => {
     try {
+      console.log('Raw request body:', req.body);
+      
       // Convert dollar amounts to cents for storage (discounts are already converted on frontend)
       const productData = {
         ...req.body,
-        price: Math.round((req.body.price || 0) * 100),
-        cost: Math.round((req.body.cost || 0) * 100),
-        wholesalerPrice: Math.round((req.body.wholesalerPrice || 0) * 100),
-        wholesalerDiscount: req.body.wholesalerDiscount || 0, // Already converted on frontend
-        retailPrice: Math.round((req.body.retailPrice || 0) * 100),
-        retailDiscount: req.body.retailDiscount || 0, // Already converted on frontend
+        price: Math.round((parseFloat(req.body.price) || 0) * 100),
+        cost: Math.round((parseFloat(req.body.cost) || 0) * 100),
+        wholesalerPrice: Math.round((parseFloat(req.body.wholesalerPrice) || 0) * 100),
+        wholesalerDiscount: parseInt(req.body.wholesalerDiscount) || 0, // Already converted on frontend
+        retailPrice: Math.round((parseFloat(req.body.retailPrice) || 0) * 100),
+        retailDiscount: parseInt(req.body.retailDiscount) || 0, // Already converted on frontend
       };
       
+      console.log('Processed product data:', productData);
+      
       const validatedData = insertProductSchema.parse(productData);
+      console.log('Validated data:', validatedData);
+      
       const newProduct = await storage.createProduct(validatedData);
       
       res.status(201).json(newProduct);
@@ -570,10 +576,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Convert dollar amounts to cents for storage if they exist in the update (discounts already converted on frontend)
       const updates = { ...req.body };
-      if (updates.price !== undefined) updates.price = Math.round(updates.price * 100);
-      if (updates.cost !== undefined) updates.cost = Math.round(updates.cost * 100);
-      if (updates.wholesalerPrice !== undefined) updates.wholesalerPrice = Math.round(updates.wholesalerPrice * 100);
-      if (updates.retailPrice !== undefined) updates.retailPrice = Math.round(updates.retailPrice * 100);
+      if (updates.price !== undefined) updates.price = Math.round((parseFloat(updates.price) || 0) * 100);
+      if (updates.cost !== undefined) updates.cost = Math.round((parseFloat(updates.cost) || 0) * 100);
+      if (updates.wholesalerPrice !== undefined) updates.wholesalerPrice = Math.round((parseFloat(updates.wholesalerPrice) || 0) * 100);
+      if (updates.retailPrice !== undefined) updates.retailPrice = Math.round((parseFloat(updates.retailPrice) || 0) * 100);
+      if (updates.wholesalerDiscount !== undefined) updates.wholesalerDiscount = parseInt(updates.wholesalerDiscount) || 0;
+      if (updates.retailDiscount !== undefined) updates.retailDiscount = parseInt(updates.retailDiscount) || 0;
       // Discounts are already converted on frontend, no additional conversion needed
       
       const validatedUpdates = insertProductSchema.partial().parse(updates);
