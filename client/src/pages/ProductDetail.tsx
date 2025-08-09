@@ -97,10 +97,14 @@ interface Product {
 
 // Helper function to convert database product to frontend product
 const convertDbProductToFrontend = (dbProduct: DbProduct, categories: ProductsCategory[]): Product => {
+  if (!dbProduct) {
+    throw new Error('Product data is required');
+  }
+  
   const category = categories.find(c => c.id === dbProduct.categoryId);
   return {
-    id: dbProduct.id,
-    name: dbProduct.name,
+    id: dbProduct.id || '',
+    name: dbProduct.name || 'Unnamed Product',
     categoryId: dbProduct.categoryId || undefined,
     category: category?.name || "Uncategorized",
     price: (dbProduct.price || 0) / 100, // Convert cents to dollars
@@ -109,14 +113,14 @@ const convertDbProductToFrontend = (dbProduct: DbProduct, categories: ProductsCa
     wholesalerDiscount: (dbProduct.wholesalerDiscount || 0) / 100, // Convert to percentage
     retailPrice: (dbProduct.retailPrice || 0) / 100,
     retailDiscount: (dbProduct.retailDiscount || 0) / 100,
-    stock: dbProduct.stock,
-    lowStockThreshold: dbProduct.lowStockThreshold,
+    stock: dbProduct.stock || 0,
+    lowStockThreshold: dbProduct.lowStockThreshold || 5,
     description: dbProduct.description || "",
     barcode: dbProduct.barcode || "",
     image: dbProduct.image || undefined,
-    status: dbProduct.status as "active" | "inactive" | "discontinued",
-    createdAt: dbProduct.createdAt,
-    updatedAt: dbProduct.updatedAt,
+    status: (dbProduct.status as "active" | "inactive" | "discontinued") || "active",
+    createdAt: dbProduct.createdAt || new Date().toISOString(),
+    updatedAt: dbProduct.updatedAt || new Date().toISOString(),
   };
 };
 
@@ -164,7 +168,7 @@ export default function ProductDetail() {
   });
 
   // Convert database product to frontend format
-  const product = dbProduct ? convertDbProductToFrontend(dbProduct, categories) : null;
+  const product = dbProduct && categories ? convertDbProductToFrontend(dbProduct, categories) : null;
 
   // Update mutation
   const updateProductMutation = useMutation({
@@ -324,19 +328,19 @@ export default function ProductDetail() {
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                    {product.name.charAt(0).toUpperCase()}
+                    {product?.name?.charAt(0)?.toUpperCase() || 'P'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h1 className="text-xl font-bold">{product.name}</h1>
-                  <p className="text-sm text-muted-foreground">{product.category}</p>
+                  <h1 className="text-xl font-bold">{product?.name || 'Loading...'}</h1>
+                  <p className="text-sm text-muted-foreground">{product?.category || 'Loading...'}</p>
                 </div>
               </div>
             </div>
             
             <div className="flex items-center gap-2">
-              <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
-                {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
+              <Badge variant={product?.status === 'active' ? 'default' : 'secondary'}>
+                {product?.status ? (product.status.charAt(0).toUpperCase() + product.status.slice(1)) : 'Loading...'}
               </Badge>
               {!isEditing ? (
                 <Button onClick={() => setIsEditing(true)} size="sm">
