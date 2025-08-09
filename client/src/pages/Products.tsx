@@ -34,7 +34,6 @@ import {
 interface Product {
   id: string;
   name: string;
-  sku: string;
   category: string;
   categoryId?: string;
   price: number; // in dollars
@@ -57,7 +56,6 @@ const convertDbProductToFrontend = (dbProduct: DbProduct, categories: ProductsCa
   return {
     id: dbProduct.id,
     name: dbProduct.name,
-    sku: dbProduct.sku,
     categoryId: dbProduct.categoryId || undefined,
     category: category?.name || "Uncategorized",
     price: (dbProduct.price || 0) / 100, // Convert cents to dollars
@@ -110,7 +108,6 @@ export default function Products() {
   // Add form state
   const [addForm, setAddForm] = useState({
     name: "",
-    sku: "",
     category: "",
     price: "",
     cost: "",
@@ -128,7 +125,6 @@ export default function Products() {
   // Edit form state
   const [editForm, setEditForm] = useState({
     name: "",
-    sku: "",
     category: "",
     price: "",
     cost: "",
@@ -145,7 +141,7 @@ export default function Products() {
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                         product.barcode.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -176,7 +172,7 @@ export default function Products() {
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       setIsAddProductOpen(false);
       setAddForm({
-        name: "", sku: "", category: "", price: "", cost: "", wholesalerPrice: "",
+        name: "", category: "", price: "", cost: "", wholesalerPrice: "",
         wholesalerDiscount: "", retailPrice: "", retailDiscount: "", stock: "",
         lowStockThreshold: "", description: "", barcode: "", status: "active"
       });
@@ -239,7 +235,6 @@ export default function Products() {
     setEditingProduct(product);
     setEditForm({
       name: product.name,
-      sku: product.sku,
       category: product.category,
       price: product.price.toString(),
       cost: product.cost.toString(),
@@ -259,45 +254,26 @@ export default function Products() {
   const handleUpdateProduct = () => {
     if (!editingProduct) return;
 
-    if (!editForm.name.trim() || !editForm.sku.trim()) {
+    if (!editForm.name.trim()) {
       toast({
         title: "Error",
-        description: "Product name and SKU are required.",
+        description: "Product name is required.",
         variant: "destructive",
       });
       return;
     }
 
-    const updatedProduct: Product = {
-      ...editingProduct,
-      name: editForm.name.trim(),
-      sku: editForm.sku.trim(),
-      category: editForm.category,
-      price: parseFloat(editForm.price) || 0,
-      cost: parseFloat(editForm.cost) || 0,
-      wholesalerPrice: parseFloat(editForm.wholesalerPrice) || 0,
-      wholesalerDiscount: parseFloat(editForm.wholesalerDiscount) || 0,
-      retailPrice: parseFloat(editForm.retailPrice) || 0,
-      retailDiscount: parseFloat(editForm.retailDiscount) || 0,
-      stock: parseInt(editForm.stock) || 0,
-      lowStockThreshold: parseInt(editForm.lowStockThreshold) || 0,
-      description: editForm.description.trim(),
-      barcode: editForm.barcode.trim(),
-      status: editForm.status
-    };
-
     updateProductMutation.mutate({
       id: editingProduct.id,
       data: {
         name: editForm.name,
-        sku: editForm.sku,
         categoryId: categories.find(c => c.name === editForm.category)?.id,
-        price: parseFloat(editForm.price) || 0,
-        cost: parseFloat(editForm.cost) || 0,
-        wholesalerPrice: parseFloat(editForm.wholesalerPrice) || 0,
-        wholesalerDiscount: parseFloat(editForm.wholesalerDiscount) || 0,
-        retailPrice: parseFloat(editForm.retailPrice) || 0,
-        retailDiscount: parseFloat(editForm.retailDiscount) || 0,
+        price: Math.round((parseFloat(editForm.price) || 0) * 100), // Convert dollars to cents
+        cost: Math.round((parseFloat(editForm.cost) || 0) * 100),
+        wholesalerPrice: Math.round((parseFloat(editForm.wholesalerPrice) || 0) * 100),
+        wholesalerDiscount: Math.round((parseFloat(editForm.wholesalerDiscount) || 0) * 100), // Convert percentage to storage format
+        retailPrice: Math.round((parseFloat(editForm.retailPrice) || 0) * 100),
+        retailDiscount: Math.round((parseFloat(editForm.retailDiscount) || 0) * 100),
         stock: parseInt(editForm.stock) || 0,
         lowStockThreshold: parseInt(editForm.lowStockThreshold) || 5,
         description: editForm.description,
@@ -308,19 +284,10 @@ export default function Products() {
   };
 
   const handleAddProduct = () => {
-    if (!addForm.name.trim() || !addForm.sku.trim()) {
+    if (!addForm.name.trim()) {
       toast({
         title: "Error",
-        description: "Product name and SKU are required.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (products.some(p => p.sku === addForm.sku.trim())) {
-      toast({
-        title: "Error",
-        description: "A product with this SKU already exists.",
+        description: "Product name is required.",
         variant: "destructive",
       });
       return;
@@ -328,14 +295,13 @@ export default function Products() {
 
     createProductMutation.mutate({
       name: addForm.name,
-      sku: addForm.sku,
       categoryId: categories.find(c => c.name === addForm.category)?.id,
-      price: parseFloat(addForm.price) || 0,
-      cost: parseFloat(addForm.cost) || 0,
-      wholesalerPrice: parseFloat(addForm.wholesalerPrice) || 0,
-      wholesalerDiscount: parseFloat(addForm.wholesalerDiscount) || 0,
-      retailPrice: parseFloat(addForm.retailPrice) || 0,
-      retailDiscount: parseFloat(addForm.retailDiscount) || 0,
+      price: Math.round((parseFloat(addForm.price) || 0) * 100), // Convert dollars to cents
+      cost: Math.round((parseFloat(addForm.cost) || 0) * 100),
+      wholesalerPrice: Math.round((parseFloat(addForm.wholesalerPrice) || 0) * 100),
+      wholesalerDiscount: Math.round((parseFloat(addForm.wholesalerDiscount) || 0) * 100), // Convert percentage to storage format
+      retailPrice: Math.round((parseFloat(addForm.retailPrice) || 0) * 100),
+      retailDiscount: Math.round((parseFloat(addForm.retailDiscount) || 0) * 100),
       stock: parseInt(addForm.stock) || 0,
       lowStockThreshold: parseInt(addForm.lowStockThreshold) || 5,
       description: addForm.description,
@@ -385,7 +351,7 @@ export default function Products() {
                 {product.name}
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                SKU: {product.sku} • {product.category}
+                {product.category} {product.barcode && `• Barcode: ${product.barcode}`}
               </CardDescription>
             </div>
             <Badge variant={stockStatus.variant} className="text-xs">
@@ -452,7 +418,7 @@ export default function Products() {
           >
             {product.name}
           </p>
-          <p className="text-sm text-muted-foreground">{product.sku}</p>
+          <p className="text-sm text-muted-foreground">{product.barcode || "No barcode"}</p>
         </div>
         <div className="text-center">
           <Badge variant="outline">{product.category}</Badge>
@@ -521,15 +487,7 @@ export default function Products() {
                   placeholder="Enter product name" 
                 />
               </div>
-              <div>
-                <Label htmlFor="sku">SKU</Label>
-                <Input 
-                  id="sku" 
-                  value={addForm.sku}
-                  onChange={(e) => setAddForm({ ...addForm, sku: e.target.value })}
-                  placeholder="Product SKU" 
-                />
-              </div>
+
               <div>
                 <Label htmlFor="category">Category</Label>
                 <div className="flex gap-2">
@@ -904,15 +862,7 @@ export default function Products() {
                 placeholder="Enter product name"
               />
             </div>
-            <div>
-              <Label htmlFor="editSku">SKU</Label>
-              <Input
-                id="editSku"
-                value={editForm.sku}
-                onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })}
-                placeholder="Product SKU"
-              />
-            </div>
+
             <div>
               <Label htmlFor="editCategory">Category</Label>
               <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>

@@ -196,7 +196,6 @@ export type ExpensesCategory = typeof expensesCategories.$inferSelect;
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
-  sku: varchar("sku").unique().notNull(),
   categoryId: varchar("category_id").references(() => productsCategories.id, { onDelete: "set null" }),
   price: integer("price").notNull().default(0), // Store as cents
   cost: integer("cost").notNull().default(0), // Store as cents
@@ -217,7 +216,6 @@ export const products = pgTable("products", {
 // Products validation schemas
 export const insertProductSchema = createInsertSchema(products).pick({
   name: true,
-  sku: true,
   categoryId: true,
   price: true,
   cost: true,
@@ -233,13 +231,12 @@ export const insertProductSchema = createInsertSchema(products).pick({
   status: true,
 }).extend({
   name: z.string().min(1, "Product name is required"),
-  sku: z.string().min(1, "SKU is required"),
   price: z.number().min(0, "Price must be non-negative"),
   cost: z.number().min(0, "Cost must be non-negative"),
   wholesalerPrice: z.number().min(0, "Wholesaler price must be non-negative"),
-  wholesalerDiscount: z.number().min(0).max(100, "Discount must be between 0-100%").optional(),
+  wholesalerDiscount: z.number().min(0).max(10000, "Discount must be valid").optional(),
   retailPrice: z.number().min(0, "Retail price must be non-negative"),
-  retailDiscount: z.number().min(0).max(100, "Discount must be between 0-100%").optional(),
+  retailDiscount: z.number().min(0).max(10000, "Discount must be valid").optional(),
   stock: z.number().min(0, "Stock must be non-negative"),
   lowStockThreshold: z.number().min(0, "Low stock threshold must be non-negative"),
   status: z.enum(["active", "inactive", "discontinued"]).optional(),
