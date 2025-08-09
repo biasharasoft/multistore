@@ -236,12 +236,12 @@ export default function Products() {
     setEditForm({
       name: product.name,
       category: product.category,
-      price: product.price.toString(),
-      cost: product.cost.toString(),
-      wholesalerPrice: product.wholesalerPrice.toString(),
-      wholesalerDiscount: product.wholesalerDiscount.toString(),
-      retailPrice: product.retailPrice.toString(),
-      retailDiscount: product.retailDiscount.toString(),
+      price: product.price.toString(), // Already converted to dollars
+      cost: product.cost.toString(), // Already converted to dollars
+      wholesalerPrice: product.wholesalerPrice.toString(), // Already converted to dollars
+      wholesalerDiscount: product.wholesalerDiscount.toString(), // Already converted to percentage
+      retailPrice: product.retailPrice.toString(), // Already converted to dollars
+      retailDiscount: product.retailDiscount.toString(), // Already converted to percentage
       stock: product.stock.toString(),
       lowStockThreshold: product.lowStockThreshold.toString(),
       description: product.description,
@@ -865,17 +865,28 @@ export default function Products() {
 
             <div>
               <Label htmlFor="editCategory">Category</Label>
-              <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCategories.map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCategories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={() => setIsAddCategoryOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+
             <div>
               <Label htmlFor="editBarcode">Barcode</Label>
               <Input
@@ -885,17 +896,7 @@ export default function Products() {
                 placeholder="Product barcode"
               />
             </div>
-            <div>
-              <Label htmlFor="editPrice">Selling Price ($)</Label>
-              <Input
-                id="editPrice"
-                type="number"
-                step="0.01"
-                value={editForm.price}
-                onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
-                placeholder="0.00"
-              />
-            </div>
+
             <div>
               <Label htmlFor="editCost">Cost Price ($)</Label>
               <Input
@@ -907,8 +908,57 @@ export default function Products() {
                 placeholder="0.00"
               />
             </div>
+
             <div>
-              <Label htmlFor="editStock">Stock Quantity</Label>
+              <Label htmlFor="editWholesalerPrice">Wholesaler Price ($)</Label>
+              <Input
+                id="editWholesalerPrice"
+                type="number"
+                step="0.01"
+                value={editForm.wholesalerPrice}
+                onChange={(e) => setEditForm({ ...editForm, wholesalerPrice: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="editWholesalerDiscount">Wholesaler Discount (%)</Label>
+              <Input
+                id="editWholesalerDiscount"
+                type="number"
+                step="0.01"
+                value={editForm.wholesalerDiscount}
+                onChange={(e) => setEditForm({ ...editForm, wholesalerDiscount: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="editRetailPrice">Retail Price ($)</Label>
+              <Input
+                id="editRetailPrice"
+                type="number"
+                step="0.01"
+                value={editForm.retailPrice}
+                onChange={(e) => setEditForm({ ...editForm, retailPrice: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="editRetailDiscount">Retail Discount (%)</Label>
+              <Input
+                id="editRetailDiscount"
+                type="number"
+                step="0.01"
+                value={editForm.retailDiscount}
+                onChange={(e) => setEditForm({ ...editForm, retailDiscount: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="editStock">Initial Stock</Label>
               <Input
                 id="editStock"
                 type="number"
@@ -917,6 +967,7 @@ export default function Products() {
                 placeholder="0"
               />
             </div>
+
             <div>
               <Label htmlFor="editThreshold">Low Stock Alert</Label>
               <Input
@@ -927,19 +978,7 @@ export default function Products() {
                 placeholder="5"
               />
             </div>
-            <div>
-              <Label htmlFor="editStatus">Status</Label>
-              <Select value={editForm.status} onValueChange={(value: "active" | "inactive" | "discontinued") => setEditForm({ ...editForm, status: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="discontinued">Discontinued</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="col-span-2">
               <Label htmlFor="editDescription">Description</Label>
               <Textarea
@@ -951,14 +990,14 @@ export default function Products() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsEditProductOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleUpdateProduct}>
               Update Product
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
