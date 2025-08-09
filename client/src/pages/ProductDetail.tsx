@@ -158,7 +158,7 @@ export default function ProductDetail() {
   });
 
   // API Queries
-  const { data: dbProduct, isLoading: isLoadingProduct } = useQuery<DbProduct>({
+  const { data: dbProduct, isLoading: isLoadingProduct, error: productError } = useQuery<DbProduct>({
     queryKey: ['/api/products', id],
     enabled: !!id,
   });
@@ -167,8 +167,17 @@ export default function ProductDetail() {
     queryKey: ['/api/products-categories'],
   });
 
+  // Debug logging
+  console.log('ProductDetail Debug:', {
+    id,
+    dbProduct,
+    categories,
+    isLoadingProduct,
+    productError
+  });
+
   // Convert database product to frontend format
-  const product = dbProduct && categories ? convertDbProductToFrontend(dbProduct, categories) : null;
+  const product = dbProduct && categories.length > 0 ? convertDbProductToFrontend(dbProduct, categories) : null;
 
   // Update mutation
   const updateProductMutation = useMutation({
