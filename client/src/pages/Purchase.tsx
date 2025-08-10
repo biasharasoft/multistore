@@ -26,10 +26,11 @@ const Purchase = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState(null);
-  const [selectedProducts, setSelectedProducts] = useState([]);
-  const [productSearchTerm, setProductSearchTerm] = useState("");
-  const [selectedSupplier, setSelectedSupplier] = useState("");
-  const [selectedStore, setSelectedStore] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [totalCost, setTotalCost] = useState(0);
+  const [sellingPrice, setSellingPrice] = useState(0);
+  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState("");
   const [dateFilter, setDateFilter] = useState("Today");
   const [startDate, setStartDate] = useState<Date>();
@@ -79,8 +80,8 @@ const Purchase = () => {
     }
   ];
 
-  // Mock data for available products
-  const availableProducts = [
+  // Mock data for products
+  const products = [
     { id: "P001", name: "Smartphone", category: "Electronics", price: 15000, stock: 50 },
     { id: "P002", name: "Laptop", category: "Electronics", price: 45000, stock: 25 },
     { id: "P003", name: "Headphones", category: "Electronics", price: 3000, stock: 100 },
@@ -127,47 +128,27 @@ const Purchase = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const filteredAvailableProducts = availableProducts.filter(product =>
-    product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(productSearchTerm.toLowerCase())
-  );
-
-  const handleSelectProduct = (product) => {
-    if (!selectedProducts.find(p => p.id === product.id)) {
-      setSelectedProducts([...selectedProducts, { ...product, quantity: 1 }]);
-    }
-  };
-
-  const handleRemoveProduct = (productId) => {
-    setSelectedProducts(selectedProducts.filter(p => p.id !== productId));
-  };
-
-  const handleQuantityChange = (productId, quantity) => {
-    setSelectedProducts(selectedProducts.map(p => 
-      p.id === productId ? { ...p, quantity: Math.max(1, quantity) } : p
-    ));
-  };
-
   const handleAddPurchase = () => {
-    if (!selectedSupplier || !selectedStore || selectedProducts.length === 0) {
+    if (!selectedProduct || quantity <= 0 || totalCost <= 0) {
       toast({
         title: "Missing Information",
-        description: "Please select supplier, store, and at least one product."
+        description: "Please fill in all required fields with valid values."
       });
       return;
     }
     
     toast({
-      title: "Purchase Order Created",
-      description: "New purchase order has been created successfully."
+      title: "Purchase Recorded",
+      description: "New purchase has been recorded successfully."
     });
     setIsAddDialogOpen(false);
     // Reset form
-    setSelectedProducts([]);
-    setSelectedSupplier("");
-    setSelectedStore("");
+    setSelectedProduct("");
+    setQuantity(1);
+    setTotalCost(0);
+    setSellingPrice(0);
+    setPurchaseDate(new Date().toISOString().split('T')[0]);
     setNotes("");
-    setProductSearchTerm("");
   };
 
   const handleEditPurchase = (purchase) => {
@@ -209,158 +190,102 @@ const Purchase = () => {
               New Purchase Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Create New Purchase Order</DialogTitle>
+              <DialogTitle>Record New Purchase</DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-6 h-[80vh]">
-              {/* Left Column - Form */}
-              <div className="space-y-6 overflow-y-auto pr-4">
-                {/* Supplier and Store */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="supplier">Supplier</Label>
-                    <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map(supplier => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="store">Store</Label>
-                    <Select value={selectedStore} onValueChange={setSelectedStore}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select store" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {stores.map(store => (
-                          <SelectItem key={store.id} value={store.id}>
-                            {store.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Selected Products List */}
-                <div className="space-y-2">
-                  <Label>Selected Products ({selectedProducts.length})</Label>
-                  <div className="border rounded-lg max-h-60 overflow-y-auto">
-                    {selectedProducts.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground">
-                        No products selected
-                      </div>
-                    ) : (
-                      <div className="divide-y">
-                        {selectedProducts.map((product) => (
-                          <div key={product.id} className="p-3 flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="font-medium">{product.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                ₱{product.price.toLocaleString()} × {product.quantity} = ₱{(product.price * product.quantity).toLocaleString()}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min="1"
-                                value={product.quantity}
-                                onChange={(e) => handleQuantityChange(product.id, parseInt(e.target.value) || 1)}
-                                className="w-16 h-8"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveProduct(product.id)}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {selectedProducts.length > 0 && (
-                    <div className="text-right font-medium">
-                      Total: ₱{selectedProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0).toLocaleString()}
-                    </div>
-                  )}
-                </div>
-
-                {/* Notes */}
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea 
-                    id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add notes for this purchase order"
-                    rows={3}
-                  />
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddPurchase}>
-                    Create Order
-                  </Button>
-                </div>
+            <div className="space-y-6">
+              {/* Product Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="product">Product</Label>
+                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                  <SelectTrigger data-testid="select-product">
+                    <SelectValue placeholder="Select a product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map(product => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Right Column - Available Products */}
-              <div className="space-y-4 overflow-y-auto pl-4 border-l">
-                <div className="space-y-2">
-                  <Label>Available Products</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Search products..."
-                      value={productSearchTerm}
-                      onChange={(e) => setProductSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2 h-full overflow-y-auto">
-                  {filteredAvailableProducts.map((product) => (
-                    <div 
-                      key={product.id} 
-                      className="border rounded-lg p-3 hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => handleSelectProduct(product)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {product.category} • Stock: {product.stock}
-                          </div>
-                          <div className="text-sm font-medium">₱{product.price.toLocaleString()}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {selectedProducts.find(p => p.id === product.id) ? (
-                            <Badge variant="secondary">Added</Badge>
-                          ) : (
-                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {/* Quantity */}
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  data-testid="input-quantity"
+                />
+              </div>
+
+              {/* Total Cost */}
+              <div className="space-y-2">
+                <Label htmlFor="totalCost">Total Cost</Label>
+                <Input
+                  id="totalCost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={totalCost}
+                  onChange={(e) => setTotalCost(parseFloat(e.target.value) || 0)}
+                  data-testid="input-total-cost"
+                />
+              </div>
+
+              {/* Selling Price */}
+              <div className="space-y-2">
+                <Label htmlFor="sellingPrice">Selling Price</Label>
+                <Input
+                  id="sellingPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={sellingPrice}
+                  onChange={(e) => setSellingPrice(parseFloat(e.target.value) || 0)}
+                  data-testid="input-selling-price"
+                />
+              </div>
+
+              {/* Purchase Date */}
+              <div className="space-y-2">
+                <Label htmlFor="purchaseDate">Purchase Date</Label>
+                <Input
+                  id="purchaseDate"
+                  type="date"
+                  value={purchaseDate}
+                  onChange={(e) => setPurchaseDate(e.target.value)}
+                  data-testid="input-purchase-date"
+                />
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea 
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add any additional notes about this purchase..."
+                  rows={3}
+                  data-testid="textarea-notes"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} data-testid="button-cancel">
+                  Cancel
+                </Button>
+                <Button onClick={handleAddPurchase} data-testid="button-record-purchase">
+                  Record Purchase
+                </Button>
               </div>
             </div>
           </DialogContent>
