@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -66,6 +66,33 @@ const Purchase = () => {
   const { data: suppliers = [], isLoading: suppliersLoading } = useQuery<any[]>({
     queryKey: ['/api/suppliers'],
   });
+
+  // Calculate current month statistics
+  const currentMonthStats = useMemo(() => {
+    if (!purchases.length) return { totalOrders: 0, totalValue: 0 };
+
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    const currentMonthPurchases = purchases.filter((purchase: any) => {
+      const purchaseDate = new Date(purchase.purchaseDate);
+      return purchaseDate.getMonth() === currentMonth && 
+             purchaseDate.getFullYear() === currentYear;
+    });
+
+    const totalOrders = currentMonthPurchases.length;
+    const totalValue = currentMonthPurchases.reduce((sum: number, purchase: any) => {
+      return sum + (purchase.totalCost || 0);
+    }, 0);
+
+    return { totalOrders, totalValue };
+  }, [purchases]);
+
+  // Calculate active suppliers count
+  const activeSuppliersCount = useMemo(() => {
+    return suppliers.filter((supplier: any) => supplier.isActive !== false).length;
+  }, [suppliers]);
 
   // Create purchase mutation
   const createPurchaseMutation = useMutation({
@@ -357,9 +384,9 @@ const Purchase = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">42</div>
+            <div className="text-2xl font-bold" data-testid="total-orders-count">{currentMonthStats.totalOrders}</div>
             <p className="text-xs text-muted-foreground">
-              +12% from last month
+              This month
             </p>
           </CardContent>
         </Card>
@@ -369,7 +396,7 @@ const Purchase = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₱145,000</div>
+            <div className="text-2xl font-bold" data-testid="total-value-amount">₱{(currentMonthStats.totalValue / 100).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               This month
             </p>
@@ -381,7 +408,7 @@ const Purchase = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">15</div>
+            <div className="text-2xl font-bold" data-testid="active-suppliers-count">{activeSuppliersCount}</div>
             <p className="text-xs text-muted-foreground">
               Active suppliers
             </p>
