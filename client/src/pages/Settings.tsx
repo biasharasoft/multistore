@@ -81,12 +81,38 @@ export default function Settings() {
     queryKey: ['/api/companies'],
   });
 
+  // Fetch appearance settings data
+  const { data: appearanceData } = useQuery<{ darkMode: boolean; compactView: boolean; language: string }>({
+    queryKey: ['/api/appearance-settings'],
+  });
+
+  // Profile form states
+  const [firstName, setFirstName] = useState(userAuth?.user?.firstName || "");
+  const [lastName, setLastName] = useState(userAuth?.user?.lastName || "");
+  const [email, setEmail] = useState(userAuth?.user?.email || "");
+  const [phone, setPhone] = useState(userAuth?.user?.phone || "");
+
   // Company form states
   const [companyName, setCompanyName] = useState(companyData?.name || "");
   const [industry, setIndustry] = useState(companyData?.industry || "");
   const [website, setWebsite] = useState(companyData?.website || "");
   const [businessAddress, setBusinessAddress] = useState(companyData?.address || "");
   const [currency, setCurrency] = useState(companyData?.currency || "tzs");
+
+  // Appearance form states
+  const [darkMode, setDarkMode] = useState(false);
+  const [compactView, setCompactView] = useState(false);
+  const [language, setLanguage] = useState("en");
+
+  // Populate form fields when user data is loaded
+  useEffect(() => {
+    if (userAuth?.user) {
+      setFirstName(userAuth.user.firstName || "");
+      setLastName(userAuth.user.lastName || "");
+      setEmail(userAuth.user.email || "");
+      setPhone(userAuth.user.phone || "");
+    }
+  }, [userAuth]);
 
   // Populate form fields when company data is loaded
   useEffect(() => {
@@ -98,6 +124,15 @@ export default function Settings() {
       setCurrency(companyData.currency || "tzs");
     }
   }, [companyData]);
+
+  // Populate appearance settings when data is loaded
+  useEffect(() => {
+    if (appearanceData) {
+      setDarkMode(appearanceData.darkMode || false);
+      setCompactView(appearanceData.compactView || false);
+      setLanguage(appearanceData.language || "en");
+    }
+  }, [appearanceData]);
 
 
   // Create products category mutation
@@ -210,6 +245,31 @@ export default function Settings() {
     },
   });
 
+  // Save user profile mutation
+  const saveProfileMutation = useMutation({
+    mutationFn: async (data: { firstName: string; lastName: string; email: string; phone: string }) => {
+      return await apiRequest('/api/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      toast({
+        title: "Success",
+        description: "Profile information has been saved successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error saving profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save profile information. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Save company mutation
   const saveCompanyMutation = useMutation({
     mutationFn: async (data: InsertCompany) => {
@@ -230,6 +290,30 @@ export default function Settings() {
       toast({
         title: "Error",
         description: "Failed to save company information. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Save appearance settings mutation
+  const saveAppearanceMutation = useMutation({
+    mutationFn: async (data: { darkMode: boolean; compactView: boolean; language: string }) => {
+      return await apiRequest('/api/appearance-settings', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Appearance settings have been saved successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error saving appearance settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save appearance settings. Please try again.",
         variant: "destructive",
       });
     },
@@ -269,6 +353,48 @@ export default function Settings() {
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("");
   const [newMemberStore, setNewMemberStore] = useState("");
+
+  // Comprehensive save handler
+  const handleSaveAllSettings = async () => {
+    try {
+      // Save all three sections concurrently
+      await Promise.all([
+        // Save profile information
+        saveProfileMutation.mutateAsync({
+          firstName,
+          lastName,
+          email,
+          phone,
+        }),
+        // Save company information
+        saveCompanyMutation.mutateAsync({
+          name: companyName,
+          industry,
+          website,
+          address: businessAddress,
+          currency,
+        }),
+        // Save appearance settings
+        saveAppearanceMutation.mutateAsync({
+          darkMode,
+          compactView,
+          language,
+        }),
+      ]);
+
+      toast({
+        title: "Success",
+        description: "All settings have been saved successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save some settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) {
@@ -409,12 +535,12 @@ export default function Settings() {
           </p>
         </div>
         <Button 
-          onClick={handleSaveCompany}
-          disabled={saveCompanyMutation.isPending}
+          onClick={handleSaveAllSettings}
+          disabled={saveProfileMutation.isPending || saveCompanyMutation.isPending || saveAppearanceMutation.isPending}
           data-testid="button-save-changes"
         >
           <Save className="h-4 w-4 mr-2" />
-          {saveCompanyMutation.isPending ? "Saving..." : "Save Changes"}
+          {(saveProfileMutation.isPending || saveCompanyMutation.isPending || saveAppearanceMutation.isPending) ? "Saving..." : "Save Changes"}
         </Button>
       </div>
 
@@ -469,22 +595,43 @@ export default function Settings() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" defaultValue={userAuth?.user?.firstName || ""} data-testid="input-first-name" />
+                      <Input 
+                        id="firstName" 
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        data-testid="input-first-name" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" defaultValue={userAuth?.user?.lastName || ""} data-testid="input-last-name" />
+                      <Input 
+                        id="lastName" 
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        data-testid="input-last-name" 
+                      />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" defaultValue={userAuth?.user?.email || ""} data-testid="input-email" />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      data-testid="input-email" 
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" defaultValue={userAuth?.user?.phone || ""} data-testid="input-phone" />
+                    <Input 
+                      id="phone" 
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      data-testid="input-phone" 
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -588,7 +735,10 @@ export default function Settings() {
                   <Label>Dark Mode</Label>
                   <p className="text-sm text-muted-foreground">Enable dark theme for the interface</p>
                 </div>
-                <Switch />
+                <Switch 
+                  checked={darkMode}
+                  onCheckedChange={setDarkMode}
+                />
               </div>
 
               <div className="flex items-center justify-between">
@@ -596,12 +746,15 @@ export default function Settings() {
                   <Label>Compact View</Label>
                   <p className="text-sm text-muted-foreground">Use compact spacing in tables and lists</p>
                 </div>
-                <Switch />
+                <Switch 
+                  checked={compactView}
+                  onCheckedChange={setCompactView}
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>Language</Label>
-                <Select defaultValue="en">
+                <Select value={language} onValueChange={setLanguage}>
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>

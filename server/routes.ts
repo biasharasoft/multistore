@@ -948,14 +948,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const purchaseData = insertPurchaseSchema.parse(req.body);
       
-      // Convert purchaseDate string to Date
-      const purchaseWithDate = {
+      // Keep purchaseDate as string for the createPurchase method
+      const purchaseWithUserId = {
         ...purchaseData,
-        purchaseDate: new Date(purchaseData.purchaseDate),
         userId: req.user!.id
       };
       
-      const newPurchase = await storage.createPurchase(purchaseWithDate);
+      const newPurchase = await storage.createPurchase(purchaseWithUserId);
       
       res.status(201).json(newPurchase);
     } catch (error) {
@@ -997,6 +996,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting purchase:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to delete purchase' 
+      });
+    }
+  });
+
+  // User profile update routes
+  app.put('/api/auth/profile', authenticateToken, async (req, res) => {
+    try {
+      const { firstName, lastName, email, phone } = req.body;
+      const updates: Partial<{ firstName: string; lastName: string; email: string; phone: string }> = {};
+      
+      if (firstName !== undefined) updates.firstName = firstName;
+      if (lastName !== undefined) updates.lastName = lastName;
+      if (email !== undefined) updates.email = email;
+      if (phone !== undefined) updates.phone = phone;
+      
+      const updatedUser = await storage.updateUser(req.user!.id, updates);
+      res.json({ user: updatedUser });
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update profile' 
+      });
+    }
+  });
+
+  // Appearance settings routes
+  app.get('/api/appearance-settings', authenticateToken, async (req, res) => {
+    try {
+      const settings = await storage.getAppearanceSettingsByUserId(req.user!.id);
+      res.json(settings || { darkMode: false, compactView: false, language: 'en' });
+    } catch (error) {
+      console.error('Error fetching appearance settings:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch appearance settings' 
+      });
+    }
+  });
+
+  app.post('/api/appearance-settings', authenticateToken, async (req, res) => {
+    try {
+      const { darkMode, compactView, language } = req.body;
+      const settingsData = {
+        darkMode: Boolean(darkMode),
+        compactView: Boolean(compactView),
+        language: String(language || 'en')
+      };
+      
+      const settings = await storage.upsertAppearanceSettings(req.user!.id, settingsData);
+      res.json(settings);
+    } catch (error) {
+      console.error('Error saving appearance settings:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to save appearance settings' 
       });
     }
   });

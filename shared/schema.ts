@@ -412,3 +412,28 @@ export const insertPurchaseSchema = createInsertSchema(purchases).pick({
 
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type Purchase = typeof purchases.$inferSelect;
+
+// Appearance themes settings table
+export const appearanceThemesSettings = pgTable("appearance_themes_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  darkMode: boolean("dark_mode").default(false),
+  compactView: boolean("compact_view").default(false),
+  language: varchar("language").default("en"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Appearance themes settings validation schemas
+export const insertAppearanceThemesSettingsSchema = createInsertSchema(appearanceThemesSettings).pick({
+  darkMode: true,
+  compactView: true,
+  language: true,
+}).extend({
+  darkMode: z.boolean().optional(),
+  compactView: z.boolean().optional(),
+  language: z.string().optional(),
+});
+
+export type InsertAppearanceThemesSettings = z.infer<typeof insertAppearanceThemesSettingsSchema>;
+export type AppearanceThemesSettings = typeof appearanceThemesSettings.$inferSelect;

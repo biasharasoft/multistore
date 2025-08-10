@@ -1,4 +1,4 @@
-import { users, companies, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase } from "@shared/schema";
+import { users, companies, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, appearanceThemesSettings, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type AppearanceThemesSettings, type InsertAppearanceThemesSettings } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -667,6 +667,68 @@ export class DatabaseStorage implements IStorage {
     
     if (result.length === 0) {
       throw new Error("Purchase not found");
+    }
+  }
+
+  // User operations
+  async updateUser(id: string, updates: Partial<{ firstName: string; lastName: string; email: string; phone: string }>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    return user;
+  }
+
+  // Appearance themes settings operations
+  async getAppearanceSettingsByUserId(userId: string): Promise<AppearanceThemesSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(appearanceThemesSettings)
+      .where(eq(appearanceThemesSettings.userId, userId));
+    return settings || undefined;
+  }
+
+  async createAppearanceSettings(settingsData: InsertAppearanceThemesSettings & { userId: string }): Promise<AppearanceThemesSettings> {
+    const [settings] = await db
+      .insert(appearanceThemesSettings)
+      .values([settingsData])
+      .returning();
+    return settings;
+  }
+
+  async updateAppearanceSettings(userId: string, updates: Partial<InsertAppearanceThemesSettings>): Promise<AppearanceThemesSettings> {
+    const [settings] = await db
+      .update(appearanceThemesSettings)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(appearanceThemesSettings.userId, userId))
+      .returning();
+    
+    if (!settings) {
+      throw new Error("Appearance settings not found");
+    }
+    
+    return settings;
+  }
+
+  async upsertAppearanceSettings(userId: string, settingsData: InsertAppearanceThemesSettings): Promise<AppearanceThemesSettings> {
+    const existing = await this.getAppearanceSettingsByUserId(userId);
+    
+    if (existing) {
+      return await this.updateAppearanceSettings(userId, settingsData);
+    } else {
+      return await this.createAppearanceSettings({ ...settingsData, userId });
     }
   }
 }
