@@ -86,6 +86,11 @@ export default function Settings() {
     queryKey: ['/api/appearance-settings'],
   });
 
+  // Fetch industries data
+  const { data: industries = [] } = useQuery<any[]>({
+    queryKey: ['/api/industries-categories'],
+  });
+
   // Profile form states
   const [firstName, setFirstName] = useState(userAuth?.user?.firstName || "");
   const [lastName, setLastName] = useState(userAuth?.user?.lastName || "");
