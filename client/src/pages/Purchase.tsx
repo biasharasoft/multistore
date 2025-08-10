@@ -51,49 +51,10 @@ const Purchase = () => {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
 
-  // Mock data for purchases
-  const purchases = [
-    {
-      id: "PO-001",
-      supplier: "ABC Electronics",
-      date: "2024-01-15",
-      status: "received",
-      total: 15000,
-      items: 12,
-      notes: "Monthly inventory restock",
-      isActive: true
-    },
-    {
-      id: "PO-002",
-      supplier: "XYZ Components",
-      date: "2024-01-14",
-      status: "pending",
-      total: 8500,
-      items: 8,
-      notes: "New product line items",
-      isActive: true
-    },
-    {
-      id: "PO-003",
-      supplier: "Tech Supplies Co",
-      date: "2024-01-12",
-      status: "partial",
-      total: 12300,
-      items: 15,
-      notes: "Partial delivery expected",
-      isActive: false
-    },
-    {
-      id: "PO-004",
-      supplier: "Global Parts Ltd",
-      date: "2024-01-10",
-      status: "cancelled",
-      total: 5600,
-      items: 6,
-      notes: "Supplier out of stock",
-      isActive: false
-    }
-  ];
+  // Fetch user's purchases from database
+  const { data: purchases = [], isLoading: purchasesLoading } = useQuery({
+    queryKey: ['/api/purchases'],
+  });
 
   // Fetch user's products from database
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
@@ -168,11 +129,10 @@ const Purchase = () => {
     }
   };
 
-  const filteredPurchases = purchases.filter(purchase => {
+  const filteredPurchases = purchases.filter((purchase: any) => {
     const matchesSearch = purchase.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         purchase.supplier.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || purchase.status === statusFilter;
-    return matchesSearch && matchesStatus;
+                         (purchase.product?.name || "").toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
   });
 
   const handleAddPurchase = () => {
@@ -536,9 +496,9 @@ const Purchase = () => {
       {/* Filters and Search */}
       <Card>
         <CardHeader>
-          <CardTitle>Purchase Orders</CardTitle>
+          <CardTitle>Purchase Records</CardTitle>
           <CardDescription>
-            View and manage all purchase orders
+            View and manage all purchase records
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -546,7 +506,7 @@ const Purchase = () => {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search by order ID or supplier..."
+                placeholder="Search by purchase ID or product..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -576,48 +536,54 @@ const Purchase = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Supplier</TableHead>
+                  <TableHead>Purchase ID</TableHead>
+                  <TableHead>Product</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Total</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Total Cost</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPurchases.map((purchase) => (
-                  <TableRow key={purchase.id}>
-                    <TableCell className="font-medium">{purchase.id}</TableCell>
-                    <TableCell>{purchase.supplier}</TableCell>
-                    <TableCell>{purchase.date}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(purchase.status)}>
-                        {purchase.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{purchase.items} items</TableCell>
-                    <TableCell>₱{purchase.total.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEditPurchase(purchase)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleToggleActive(purchase)}
-                          className={purchase.isActive ? "text-destructive hover:text-destructive" : "text-green-600 hover:text-green-700"}
-                        >
-                          <Power className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {purchasesLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-4">
+                      Loading purchases...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredPurchases.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-4">
+                      No purchases found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPurchases.map((purchase: any) => (
+                    <TableRow key={purchase.id}>
+                      <TableCell className="font-medium">{purchase.id.slice(0, 8)}</TableCell>
+                      <TableCell>{products.find(p => p.id === purchase.productId)?.name || "Unknown Product"}</TableCell>
+                      <TableCell>{new Date(purchase.purchaseDate).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                          completed
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{purchase.quantity} items</TableCell>
+                      <TableCell>₱{(purchase.totalCost / 100).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleEditPurchase(purchase)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
