@@ -83,6 +83,8 @@ export default function Suppliers() {
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
+  const [isEditSupplierOpen, setIsEditSupplierOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
   // Form state for adding new supplier
   const [supplierForm, setSupplierForm] = useState({
@@ -149,6 +151,89 @@ export default function Suppliers() {
       });
     },
   });
+
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: "",
+    contactPerson: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    status: "active" as "active" | "inactive" | "pending",
+    description: "",
+    website: "",
+  });
+
+  // Update supplier mutation
+  const updateSupplierMutation = useMutation({
+    mutationFn: async (data: { id: string; updates: Partial<InsertSupplier> }) => {
+      return apiRequest(`/api/suppliers/${data.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data.updates),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Supplier updated successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/suppliers'] });
+      setIsEditSupplierOpen(false);
+      setEditingSupplier(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update supplier: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle edit click
+  const handleEditClick = (supplier: any) => {
+    setEditingSupplier(supplier);
+    setEditForm({
+      name: supplier.name || "",
+      contactPerson: supplier.contactPerson || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      address: supplier.address || "",
+      city: supplier.city || "",
+      status: supplier.status || "active",
+      description: supplier.description || "",
+      website: supplier.website || "",
+    });
+    setIsEditSupplierOpen(true);
+  };
+
+  // Handle edit form submission
+  const handleEditSupplier = () => {
+    if (!editingSupplier) return;
+    
+    try {
+      const updateData: Partial<InsertSupplier> = {
+        name: editForm.name,
+        contactPerson: editForm.contactPerson || undefined,
+        email: editForm.email || undefined,
+        phone: editForm.phone || undefined,
+        address: editForm.address || undefined,
+        city: editForm.city || undefined,
+        status: editForm.status,
+        description: editForm.description || undefined,
+        website: editForm.website || undefined,
+      };
+
+      updateSupplierMutation.mutate({ id: editingSupplier.id, updates: updateData });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Please check your form data and try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Handle form submission
   const handleAddSupplier = () => {
@@ -275,7 +360,13 @@ export default function Suppliers() {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="flex-1">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => handleEditClick(supplier)}
+              data-testid="button-edit-supplier"
+            >
               <Edit className="h-4 w-4 mr-1" />
               Edit
             </Button>
@@ -321,7 +412,12 @@ export default function Suppliers() {
           ${supplier.totalSpent.toLocaleString()}
         </div>
         <div className="flex gap-1 justify-center">
-          <Button variant="ghost" size="sm">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => handleEditClick(supplier)}
+            data-testid="button-edit-supplier-list"
+          >
             <Edit className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm">
@@ -453,6 +549,126 @@ export default function Suppliers() {
                 data-testid="button-add-supplier"
               >
                 {createSupplierMutation.isPending ? "Adding..." : "Add Supplier"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Supplier Dialog */}
+        <Dialog open={isEditSupplierOpen} onOpenChange={setIsEditSupplierOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Edit Supplier</DialogTitle>
+              <DialogDescription>
+                Update supplier information
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div>
+                <Label htmlFor="editSupplierName">Company Name *</Label>
+                <Input 
+                  id="editSupplierName" 
+                  placeholder="Enter company name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  data-testid="input-edit-supplier-name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editContactPerson">Contact Person</Label>
+                <Input 
+                  id="editContactPerson" 
+                  placeholder="Contact person name"
+                  value={editForm.contactPerson}
+                  onChange={(e) => setEditForm({ ...editForm, contactPerson: e.target.value })}
+                  data-testid="input-edit-contact-person"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editEmail">Email</Label>
+                <Input 
+                  id="editEmail" 
+                  type="email" 
+                  placeholder="contact@supplier.com"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  data-testid="input-edit-email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editPhone">Phone</Label>
+                <Input 
+                  id="editPhone" 
+                  placeholder="+1 (555) 123-4567"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  data-testid="input-edit-phone"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editWebsite">Website (Optional)</Label>
+                <Input 
+                  id="editWebsite" 
+                  placeholder="https://supplier.com"
+                  value={editForm.website}
+                  onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
+                  data-testid="input-edit-website"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editStatus">Status</Label>
+                <Select value={editForm.status} onValueChange={(value: "active" | "inactive" | "pending") => setEditForm({ ...editForm, status: value })}>
+                  <SelectTrigger data-testid="select-edit-status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="editAddress">Address</Label>
+                <Input 
+                  id="editAddress" 
+                  placeholder="Street address"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  data-testid="input-edit-address"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editCity">City</Label>
+                <Input 
+                  id="editCity" 
+                  placeholder="City"
+                  value={editForm.city}
+                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                  data-testid="input-edit-city"
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="editDescription">Description</Label>
+                <Textarea 
+                  id="editDescription" 
+                  placeholder="Supplier description and notes"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  data-testid="input-edit-description"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditSupplierOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleEditSupplier}
+                disabled={updateSupplierMutation.isPending || !editForm.name}
+                data-testid="button-update-supplier"
+              >
+                {updateSupplierMutation.isPending ? "Updating..." : "Update Supplier"}
               </Button>
             </div>
           </DialogContent>
