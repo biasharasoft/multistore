@@ -100,18 +100,18 @@ export default function Settings() {
     }
   }, [industries, isLoadingIndustries, industriesError]);
 
+  // Profile form states
+  const [firstName, setFirstName] = useState(userAuth?.user?.firstName || "");
+  const [lastName, setLastName] = useState(userAuth?.user?.lastName || "");
+  const [email, setEmail] = useState(userAuth?.user?.email || "");
+  const [phone, setPhone] = useState(userAuth?.user?.phone || "");
+
   // Debug log for user data and phone field
   useEffect(() => {
     console.log('User auth data:', userAuth);
     console.log('Phone value from user:', userAuth?.user?.phone);
     console.log('Current phone state:', phone);
   }, [userAuth, phone]);
-
-  // Profile form states
-  const [firstName, setFirstName] = useState(userAuth?.user?.firstName || "");
-  const [lastName, setLastName] = useState(userAuth?.user?.lastName || "");
-  const [email, setEmail] = useState(userAuth?.user?.email || "");
-  const [phone, setPhone] = useState(userAuth?.user?.phone || "");
 
   // Company form states
   const [companyName, setCompanyName] = useState(companyData?.name || "");
