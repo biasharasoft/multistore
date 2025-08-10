@@ -406,21 +406,7 @@ export default function Suppliers() {
                   data-testid="input-phone"
                 />
               </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={supplierForm.category} onValueChange={(value) => setSupplierForm({ ...supplierForm, category: value })}>
-                  <SelectTrigger data-testid="select-category">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {expenseCategories.map(category => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              
               <div>
                 <Label htmlFor="website">Website (Optional)</Label>
                 <Input 
