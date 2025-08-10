@@ -408,20 +408,7 @@ export default function Settings() {
                     <Input id="phone" defaultValue="+1 (555) 123-4567" />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select defaultValue="est">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="est">Eastern Time (EST)</SelectItem>
-                        <SelectItem value="cst">Central Time (CST)</SelectItem>
-                        <SelectItem value="mst">Mountain Time (MST)</SelectItem>
-                        <SelectItem value="pst">Pacific Time (PST)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  
                 </div>
               </CardContent>
             </Card>
