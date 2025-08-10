@@ -71,7 +71,7 @@ const Purchase = () => {
   const createPurchaseMutation = useMutation({
     mutationFn: async (purchaseData: {
       productId: string;
-      supplierId: string;
+      supplierId?: string;
       quantity: number;
       totalCost: number;
       sellingPrice: number;
@@ -135,7 +135,7 @@ const Purchase = () => {
   });
 
   const handleAddPurchase = () => {
-    if (!selectedProduct || !selectedSupplier || quantity <= 0 || totalCost <= 0) {
+    if (!selectedProduct || quantity <= 0 || totalCost <= 0) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields with valid values."
@@ -146,7 +146,7 @@ const Purchase = () => {
     // Convert prices to cents for storage
     const purchaseData = {
       productId: selectedProduct,
-      supplierId: selectedSupplier,
+      supplierId: selectedSupplier || undefined,
       quantity,
       totalCost: Math.round(totalCost * 100), // Convert to cents
       sellingPrice: Math.round(sellingPrice * 100), // Convert to cents
@@ -226,12 +226,13 @@ const Purchase = () => {
 
               {/* Supplier Selection */}
               <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier</Label>
+                <Label htmlFor="supplier">Supplier (Optional)</Label>
                 <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
                   <SelectTrigger data-testid="select-supplier">
-                    <SelectValue placeholder="Select a supplier" />
+                    <SelectValue placeholder="Select a supplier (optional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">No supplier selected</SelectItem>
                     {suppliersLoading ? (
                       <SelectItem value="" disabled>Loading suppliers...</SelectItem>
                     ) : suppliers.length === 0 ? (

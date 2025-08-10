@@ -51,6 +51,14 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
 - All components and pages preserved from original project
 
 ## Recent Changes
+- **2025-08-10**: Enhanced purchase management system with supplier integration
+  - Added supplier dropdown to purchase recording form that loads from suppliers database
+  - Updated purchases table schema to include optional supplier_id field with foreign key relationship
+  - Made supplier selection optional - users can record purchases with or without supplier
+  - Applied database migration to add nullable supplier_id column
+  - Updated form validation to make supplier selection optional while keeping product selection required
+  - Purchase orders table now displays real data from purchases database instead of mock data
+  - Removed Pending Orders widget from purchase interface for cleaner layout
 - **2025-08-10**: Completed customer management system restructuring
   - Removed Country, Category, Notes, and Address fields from customer form and database
   - Added Gender field with Male/Female dropdown options and Date of Birth field
