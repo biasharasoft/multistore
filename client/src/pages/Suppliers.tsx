@@ -264,10 +264,7 @@ export default function Suppliers() {
               <p className="text-muted-foreground">Total Spent</p>
               <p className="font-semibold text-primary">${supplier.totalSpent.toLocaleString()}</p>
             </div>
-            <div>
-              <p className="text-muted-foreground">Lead Time</p>
-              <p className="font-semibold">{supplier.leadTime} days</p>
-            </div>
+
             <div>
               <p className="text-muted-foreground">Rating</p>
               <div className="flex items-center gap-1">

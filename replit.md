@@ -51,6 +51,12 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
 - All components and pages preserved from original project
 
 ## Recent Changes
+- **2025-08-10**: Completed supplier management system integration
+  - Connected category dropdown to load from expenses_categories database table
+  - Implemented complete supplier registration with database persistence
+  - Streamlined Add Supplier form by removing Country and Lead Time fields
+  - Removed Lead Time display from supplier cards for cleaner UI
+  - Successfully tested supplier creation with real database integration
 - **2025-08-07**: Added regions table to database schema
   - Created regions table with id, name, and is_active columns
   - Set is_active to default false as requested
