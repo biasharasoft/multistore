@@ -38,8 +38,8 @@ import {
   Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import type { Customer, InsertCustomer } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Customer, InsertCustomer, Region } from "@shared/schema";
 import { insertCustomerSchema } from "@shared/schema";
 
 
@@ -57,6 +57,12 @@ const Customers = () => {
   const { data: customers = [], isLoading, error } = useQuery<Customer[]>({
     queryKey: ['/api/customers'],
     queryFn: () => fetch('/api/customers').then(res => res.json())
+  });
+
+  // Fetch regions from API
+  const { data: regions = [] } = useQuery<Region[]>({
+    queryKey: ['/api/regions'],
+    queryFn: () => fetch('/api/regions').then(res => res.json())
   });
 
   // Mutations for CRUD operations
@@ -173,10 +179,10 @@ const Customers = () => {
         email: customer?.email || "",
         phone: customer?.phone || "",
         city: customer?.city || "",
-        status: customer?.status || "active",
-        gender: customer?.gender || "male",
-        dateOfBirth: customer?.dateOfBirth ? new Date(customer.dateOfBirth) : undefined,
-        idType: customer?.idType || "nida",
+        status: (customer?.status as "active" | "inactive" | "vip") || "active",
+        gender: customer?.gender as "male" | "female" | undefined,
+        dateOfBirth: customer?.dateOfBirth ? new Date(customer.dateOfBirth).toISOString().split('T')[0] : "",
+        idType: customer?.idType as "nida" | "driverLicense" | "passport" | "voterID" | undefined,
         idNumber: customer?.idNumber || "",
       },
     });
@@ -246,11 +252,22 @@ const Customers = () => {
               name="city"
               render={({ field }) => (
                 <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">City</FormLabel>
+                  <FormLabel className="text-right">Region</FormLabel>
                   <div className="col-span-3">
-                    <FormControl>
-                      <Input {...field} data-testid="input-city" />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} data-testid="select-region">
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select region" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {regions.map((region: any) => (
+                          <SelectItem key={region.id} value={region.name}>
+                            {region.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </div>
                 </FormItem>
@@ -319,35 +336,18 @@ const Customers = () => {
                 <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">Date of Birth</FormLabel>
                   <div className="col-span-3">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                            data-testid="date-picker-trigger"
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input 
+                        type="date"
+                        {...field}
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        max={new Date().toISOString().split('T')[0]}
+                        min="1900-01-01"
+                        placeholder="1986-01-05"
+                        data-testid="input-date-of-birth"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </div>
                 </FormItem>
@@ -590,7 +590,7 @@ const Customers = () => {
                           <TableCell>
                             <div className="font-medium">{customer.name}</div>
                             <div className="text-sm text-muted-foreground">
-                              Joined {new Date(customer.dateJoined).toLocaleDateString()}
+                              Joined {customer.dateJoined ? new Date(customer.dateJoined).toLocaleDateString() : 'N/A'}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -620,7 +620,7 @@ const Customers = () => {
                           </TableCell>
                           <TableCell>{getStatusBadge(customer.status)}</TableCell>
                           <TableCell className="text-right">{customer.totalOrders}</TableCell>
-                          <TableCell className="text-right">TSh {customer.totalSpent.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">TSh {(customer.totalSpent || 0).toLocaleString()}</TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -689,7 +689,6 @@ const Customers = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           {getStatusBadge(customer.status)}
-                          {getCategoryBadge(customer.category)}
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -704,7 +703,7 @@ const Customers = () => {
                           </div>
                           <div className="flex items-center text-sm">
                             <MapPin className="mr-2 h-3 w-3" />
-                            {customer.city}, {customer.country}
+                            {customer.city}
                           </div>
                           <div className="flex items-center text-sm">
                             <ShoppingCart className="mr-2 h-3 w-3" />
@@ -712,7 +711,7 @@ const Customers = () => {
                           </div>
                           <div className="flex items-center text-sm font-medium">
                             <DollarSign className="mr-2 h-3 w-3" />
-                            TSh {customer.totalSpent.toLocaleString()} total spent
+                            TSh {(customer.totalSpent || 0).toLocaleString()} total spent
                           </div>
                         </div>
                       </CardContent>

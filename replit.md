@@ -58,7 +58,10 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
   - Modified customer table display to show Gender and Date of Birth instead of removed fields
   - Removed category filtering functionality since Category field was eliminated
   - Fixed date validation issue by handling dateOfBirth conversion from string to Date in backend routes
-  - Successfully tested customer creation and retrieval with new field structure
+  - Updated City field to use dropdown populated from regions table instead of text input
+  - Changed Date of Birth field to use HTML5 date input with yyyy-mm-dd format (e.g., 1986-01-05)
+  - Fixed TypeScript errors and null safety issues in customer display components
+  - Successfully tested customer creation and retrieval with new field structure and API integration
 - **2025-08-10**: Completed supplier management system integration
   - Connected category dropdown to load from expenses_categories database table
   - Implemented complete supplier registration with database persistence
