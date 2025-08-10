@@ -210,9 +210,9 @@ const Purchase = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {productsLoading ? (
-                      <SelectItem value="" disabled>Loading products...</SelectItem>
+                      <SelectItem value="loading" disabled>Loading products...</SelectItem>
                     ) : products.length === 0 ? (
-                      <SelectItem value="" disabled>No products available</SelectItem>
+                      <SelectItem value="no-products" disabled>No products available</SelectItem>
                     ) : (
                       products.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
