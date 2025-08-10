@@ -1000,6 +1000,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Industries categories routes
+  app.get('/api/industries-categories', async (req, res) => {
+    try {
+      const industries = await storage.getActiveIndustriesCategories();
+      res.json(industries);
+    } catch (error) {
+      console.error('Error fetching industries categories:', error);
+      res.status(500).json({ error: 'Failed to fetch industries categories' });
+    }
+  });
+
   // User profile update routes
   app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     try {

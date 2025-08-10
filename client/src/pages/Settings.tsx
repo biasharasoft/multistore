@@ -688,7 +688,7 @@ export default function Settings() {
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>Loading industries...</SelectItem>
+                        <SelectItem value="loading" disabled>Loading industries...</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
