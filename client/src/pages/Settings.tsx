@@ -269,6 +269,10 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      // Refresh user data to update form fields
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/auth/me'] });
+      }, 100);
       toast({
         title: "Success",
         description: "Profile information has been saved successfully.",
