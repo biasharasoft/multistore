@@ -1,4 +1,4 @@
-import { users, companies, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, appearanceThemesSettings, industriesCategories, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory } from "@shared/schema";
+import { users, companies, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, appearanceThemesSettings, industriesCategories, teamMembers, teamInvitations, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory, type TeamMember, type InsertTeamMember, type TeamInvitation, type InsertTeamInvitation } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -93,6 +93,22 @@ export interface IStorage {
   createIndustryCategory(category: InsertIndustryCategory): Promise<IndustryCategory>;
   updateIndustryCategory(id: string, updates: Partial<InsertIndustryCategory>): Promise<IndustryCategory>;
   deleteIndustryCategory(id: string): Promise<void>;
+  
+  // Team member operations
+  getTeamMembersByUserId(userId: string): Promise<TeamMember[]>;
+  getTeamMemberById(id: string): Promise<TeamMember | undefined>;
+  getTeamMemberByEmail(email: string, userId: string): Promise<TeamMember | undefined>;
+  createTeamMember(member: InsertTeamMember & { userId: string }): Promise<TeamMember>;
+  updateTeamMember(id: string, userId: string, updates: Partial<InsertTeamMember>): Promise<TeamMember>;
+  deleteTeamMember(id: string, userId: string): Promise<void>;
+  
+  // Team invitation operations
+  getTeamInvitationsByUserId(userId: string): Promise<TeamInvitation[]>;
+  getTeamInvitationById(id: string): Promise<TeamInvitation | undefined>;
+  getTeamInvitationByToken(token: string): Promise<TeamInvitation | undefined>;
+  createTeamInvitation(invitation: InsertTeamInvitation & { organizationOwnerId: string; token: string; expiresAt: Date }): Promise<TeamInvitation>;
+  updateTeamInvitation(id: string, updates: Partial<InsertTeamInvitation>): Promise<TeamInvitation>;
+  deleteTeamInvitation(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -815,6 +831,136 @@ export class DatabaseStorage implements IStorage {
     
     if (result.length === 0) {
       throw new Error("Industry category not found");
+    }
+  }
+
+  // Team member operations
+  async getTeamMembersByUserId(userId: string): Promise<TeamMember[]> {
+    const members = await db
+      .select()
+      .from(teamMembers)
+      .where(eq(teamMembers.userId, userId))
+      .orderBy(teamMembers.createdAt);
+    return members;
+  }
+
+  async getTeamMemberById(id: string): Promise<TeamMember | undefined> {
+    const [member] = await db
+      .select()
+      .from(teamMembers)
+      .where(eq(teamMembers.id, id));
+    return member || undefined;
+  }
+
+  async getTeamMemberByEmail(email: string, userId: string): Promise<TeamMember | undefined> {
+    const [member] = await db
+      .select()
+      .from(teamMembers)
+      .where(and(
+        eq(teamMembers.email, email),
+        eq(teamMembers.userId, userId)
+      ));
+    return member || undefined;
+  }
+
+  async createTeamMember(memberData: InsertTeamMember & { userId: string }): Promise<TeamMember> {
+    const [member] = await db
+      .insert(teamMembers)
+      .values(memberData)
+      .returning();
+    return member;
+  }
+
+  async updateTeamMember(id: string, userId: string, updates: Partial<InsertTeamMember>): Promise<TeamMember> {
+    const [member] = await db
+      .update(teamMembers)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(teamMembers.id, id),
+        eq(teamMembers.userId, userId)
+      ))
+      .returning();
+    
+    if (!member) {
+      throw new Error("Team member not found");
+    }
+    
+    return member;
+  }
+
+  async deleteTeamMember(id: string, userId: string): Promise<void> {
+    const result = await db
+      .delete(teamMembers)
+      .where(and(
+        eq(teamMembers.id, id),
+        eq(teamMembers.userId, userId)
+      ))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Team member not found");
+    }
+  }
+
+  // Team invitation operations
+  async getTeamInvitationsByUserId(userId: string): Promise<TeamInvitation[]> {
+    const invitations = await db
+      .select()
+      .from(teamInvitations)
+      .where(eq(teamInvitations.organizationOwnerId, userId))
+      .orderBy(teamInvitations.createdAt);
+    return invitations;
+  }
+
+  async getTeamInvitationById(id: string): Promise<TeamInvitation | undefined> {
+    const [invitation] = await db
+      .select()
+      .from(teamInvitations)
+      .where(eq(teamInvitations.id, id));
+    return invitation || undefined;
+  }
+
+  async getTeamInvitationByToken(token: string): Promise<TeamInvitation | undefined> {
+    const [invitation] = await db
+      .select()
+      .from(teamInvitations)
+      .where(eq(teamInvitations.token, token));
+    return invitation || undefined;
+  }
+
+  async createTeamInvitation(invitationData: InsertTeamInvitation & { organizationOwnerId: string; token: string; expiresAt: Date }): Promise<TeamInvitation> {
+    const [invitation] = await db
+      .insert(teamInvitations)
+      .values(invitationData)
+      .returning();
+    return invitation;
+  }
+
+  async updateTeamInvitation(id: string, updates: Partial<InsertTeamInvitation>): Promise<TeamInvitation> {
+    const [invitation] = await db
+      .update(teamInvitations)
+      .set(updates)
+      .where(eq(teamInvitations.id, id))
+      .returning();
+    
+    if (!invitation) {
+      throw new Error("Team invitation not found");
+    }
+    
+    return invitation;
+  }
+
+  async deleteTeamInvitation(id: string): Promise<void> {
+    const result = await db
+      .delete(teamInvitations)
+      .where(eq(teamInvitations.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Team invitation not found");
     }
   }
 }

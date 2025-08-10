@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { authService } from "./services/authService";
 import { authenticateToken, optionalAuth } from "./middleware/auth";
@@ -21,7 +22,9 @@ import {
   insertSupplierSchema,
   insertCustomerSchema,
   insertPurchaseSchema,
-  insertCompanySchema
+  insertCompanySchema,
+  insertTeamMemberSchema,
+  insertTeamInvitationSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1150,6 +1153,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error updating user profile:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to update profile' 
+      });
+    }
+  });
+
+  // Team Member Management Routes
+  
+  // Get team members for authenticated user
+  app.get('/api/team-members', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const teamMembers = await storage.getTeamMembersByUserId(userId);
+      res.json(teamMembers);
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch team members' 
+      });
+    }
+  });
+
+  // Send team member invitation
+  app.post('/api/team-members/invite', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { email, name, role, storeName } = insertTeamMemberSchema.parse(req.body);
+      
+      // Check if member already exists
+      const existingMember = await storage.getTeamMemberByEmail(email, userId);
+      if (existingMember) {
+        return res.status(400).json({ 
+          message: 'A team member with this email already exists' 
+        });
+      }
+      
+      // Generate unique invitation token
+      const invitationToken = randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      // Find the store ID if storeName is provided
+      let storeId = null;
+      if (storeName) {
+        const userStores = await storage.getStoresByUserId(userId);
+        const store = userStores.find(s => s.name === storeName);
+        storeId = store?.id || null;
+      }
+
+      // Create team invitation record
+      await storage.createTeamInvitation({
+        organizationOwnerId: userId,
+        email,
+        name,
+        role,
+        storeId,
+        storeName,
+        token: invitationToken,
+        expiresAt
+      });
+
+      // Create team member record in pending status
+      const teamMember = await storage.createTeamMember({
+        userId,
+        email,
+        name,
+        role,
+        storeId,
+        storeName,
+        status: 'pending'
+      });
+
+      // In a real application, you would send an invitation email here
+      // For now, we'll just log the invitation details
+      console.log(`Team invitation sent to ${email} with token: ${invitationToken}`);
+
+      res.json({ 
+        message: 'Invitation sent successfully',
+        teamMember,
+        invitationToken // In production, don't return this
+      });
+    } catch (error) {
+      console.error('Error sending team invitation:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to send invitation' 
+      });
+    }
+  });
+
+  // Update team member
+  app.put('/api/team-members/:id', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const updatedMember = await storage.updateTeamMember(id, userId, updates);
+      res.json(updatedMember);
+    } catch (error) {
+      console.error('Error updating team member:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update team member' 
+      });
+    }
+  });
+
+  // Delete team member
+  app.delete('/api/team-members/:id', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+      
+      await storage.deleteTeamMember(id, userId);
+      res.json({ message: 'Team member removed successfully' });
+    } catch (error) {
+      console.error('Error deleting team member:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to remove team member' 
+      });
+    }
+  });
+
+  // Get team invitations for authenticated user
+  app.get('/api/team-invitations', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const invitations = await storage.getTeamInvitationsByUserId(userId);
+      res.json(invitations);
+    } catch (error) {
+      console.error('Error fetching team invitations:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch invitations' 
       });
     }
   });

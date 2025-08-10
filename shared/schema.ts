@@ -456,3 +456,72 @@ export const insertIndustryCategorySchema = createInsertSchema(industriesCategor
 
 export type InsertIndustryCategory = z.infer<typeof insertIndustryCategorySchema>;
 export type IndustryCategory = typeof industriesCategories.$inferSelect;
+
+// Team members table
+export const teamMembers = pgTable("team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // Organization owner
+  invitedUserId: varchar("invited_user_id").references(() => users.id, { onDelete: "cascade" }), // The invited user (null until they accept)
+  email: varchar("email").notNull(), // Email of the invited person
+  name: varchar("name").notNull(), // Full name
+  role: varchar("role").notNull(), // Admin, Manager, Cashier, Staff
+  storeId: varchar("store_id").references(() => stores.id, { onDelete: "cascade" }), // Store they have access to
+  storeName: varchar("store_name").notNull(), // Store name for easier querying
+  status: varchar("status").notNull().default("pending"), // pending, active, inactive
+  invitedAt: timestamp("invited_at").defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Team member invitations table
+export const teamInvitations = pgTable("team_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationOwnerId: varchar("organization_owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  email: varchar("email").notNull(),
+  name: varchar("name").notNull(),
+  role: varchar("role").notNull(),
+  storeId: varchar("store_id").references(() => stores.id, { onDelete: "cascade" }),
+  storeName: varchar("store_name").notNull(),
+  token: varchar("token").notNull().unique(), // Unique invitation token
+  status: varchar("status").notNull().default("pending"), // pending, accepted, expired, rejected
+  expiresAt: timestamp("expires_at").notNull(),
+  sentAt: timestamp("sent_at").defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Team members validation schemas
+export const insertTeamMemberSchema = createInsertSchema(teamMembers).pick({
+  email: true,
+  name: true,
+  role: true,
+  storeId: true,
+  storeName: true,
+}).extend({
+  email: z.string().email("Valid email is required"),
+  name: z.string().min(1, "Name is required"),
+  role: z.enum(["Admin", "Manager", "Cashier", "Staff"]),
+  storeId: z.string().optional(),
+  storeName: z.string().min(1, "Store is required"),
+});
+
+// Team invitation validation schemas
+export const insertTeamInvitationSchema = createInsertSchema(teamInvitations).pick({
+  email: true,
+  name: true,
+  role: true,
+  storeId: true,
+  storeName: true,
+}).extend({
+  email: z.string().email("Valid email is required"),
+  name: z.string().min(1, "Name is required"),
+  role: z.enum(["Admin", "Manager", "Cashier", "Staff"]),
+  storeId: z.string().optional(),
+  storeName: z.string().min(1, "Store is required"),
+});
+
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type InsertTeamInvitation = z.infer<typeof insertTeamInvitationSchema>;
+export type TeamInvitation = typeof teamInvitations.$inferSelect;

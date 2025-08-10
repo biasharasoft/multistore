@@ -56,6 +56,12 @@ export default function Settings() {
   const [editCategoryDescription, setEditCategoryDescription] = useState("");
   const [editCategoryStatus, setEditCategoryStatus] = useState("");
 
+  // Team member invitation states
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteRole, setInviteRole] = useState("viewer");
+  const [inviteStore, setInviteStore] = useState("");
+
   // Fetch products categories
   const { data: productCategories = [], isLoading: isLoadingProductCategories } = useQuery<ProductsCategory[]>({
     queryKey: ['/api/products-categories'],
@@ -71,6 +77,16 @@ export default function Settings() {
   // Fetch current user data
   const { data: userAuth } = useQuery<{ user: { id: string; email: string; firstName?: string; lastName?: string; phone?: string } }>({
     queryKey: ['/api/auth/me'],
+  });
+
+  // Fetch team members
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['/api/team-members'],
+  });
+
+  // Fetch user stores
+  const { data: userStores = [] } = useQuery({
+    queryKey: ['/api/stores'],
   });
 
   // Fetch user's stores from database
@@ -192,7 +208,7 @@ export default function Settings() {
           }),
         });
         
-        setProfileImageUrl(uploadURL);
+        setProfileImageUrl(uploadURL || '');
         
         // Invalidate user auth query to refresh profile data
         queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
@@ -400,6 +416,36 @@ export default function Settings() {
     },
   });
 
+  // Send team member invitation mutation
+  const sendInvitationMutation = useMutation({
+    mutationFn: async (data: { email: string; name: string; role: string; storeName?: string }) => {
+      return await apiRequest('/api/team-members/invite', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      setInviteEmail("");
+      setInviteName("");
+      setInviteRole("viewer");
+      setInviteStore("");
+      setIsAddMemberOpen(false);
+      toast({
+        title: "Success",
+        description: "Team member invitation sent successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error sending invitation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send invitation. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Map product categories to the expected format for the UI
   const mappedProductCategories = productCategories.map(category => ({
     id: category.id,
@@ -423,17 +469,26 @@ export default function Settings() {
 
 
 
-  const [teamMembers, setTeamMembers] = useState([
-    { id: 1, name: "John Doe", email: "john@company.com", role: "Admin", status: "active", store: "Downtown Branch" },
-    { id: 2, name: "Jane Smith", email: "jane@company.com", role: "Manager", status: "active", store: "Mall Location" },
-    { id: 3, name: "Mike Johnson", email: "mike@company.com", role: "Cashier", status: "pending", store: "Downtown Branch" },
-  ]);
-
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
-  const [newMemberName, setNewMemberName] = useState("");
-  const [newMemberEmail, setNewMemberEmail] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState("");
-  const [newMemberStore, setNewMemberStore] = useState("");
+
+  // Handler for sending team member invitation
+  const handleSendInvitation = () => {
+    if (!inviteEmail.trim() || !inviteName.trim()) {
+      toast({
+        title: "Error",
+        description: "Email and name are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    sendInvitationMutation.mutate({
+      email: inviteEmail,
+      name: inviteName,
+      role: inviteRole,
+      storeName: inviteStore || undefined,
+    });
+  };
 
   // Comprehensive save handler
   const handleSaveAllSettings = async () => {
@@ -1128,9 +1183,10 @@ export default function Settings() {
                         <Label htmlFor="memberName">Full Name</Label>
                         <Input
                           id="memberName"
-                          value={newMemberName}
-                          onChange={(e) => setNewMemberName(e.target.value)}
+                          value={inviteName}
+                          onChange={(e) => setInviteName(e.target.value)}
                           placeholder="Enter full name"
+                          data-testid="input-member-name"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1138,33 +1194,35 @@ export default function Settings() {
                         <Input
                           id="memberEmail"
                           type="email"
-                          value={newMemberEmail}
-                          onChange={(e) => setNewMemberEmail(e.target.value)}
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
                           placeholder="Enter email address"
+                          data-testid="input-member-email"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="memberRole">Role</Label>
-                        <Select value={newMemberRole} onValueChange={setNewMemberRole}>
-                          <SelectTrigger>
+                        <Select value={inviteRole} onValueChange={setInviteRole}>
+                          <SelectTrigger data-testid="select-member-role">
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Admin">Admin</SelectItem>
-                            <SelectItem value="Manager">Manager</SelectItem>
-                            <SelectItem value="Cashier">Cashier</SelectItem>
-                            <SelectItem value="Staff">Staff</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="editor">Editor</SelectItem>
+                            <SelectItem value="viewer">Viewer</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="memberStore">Assign Store</Label>
-                        <Select value={newMemberStore} onValueChange={setNewMemberStore}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select store" />
+                        <Label htmlFor="memberStore">Assign Store (Optional)</Label>
+                        <Select value={inviteStore} onValueChange={setInviteStore}>
+                          <SelectTrigger data-testid="select-member-store">
+                            <SelectValue placeholder="Select store (optional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            {stores.filter(store => store.status === 'active').map((store) => (
+                            <SelectItem value="">No specific store</SelectItem>
+                            {userStores.map((store) => (
                               <SelectItem key={store.id} value={store.name}>
                                 {store.name}
                               </SelectItem>
@@ -1177,8 +1235,12 @@ export default function Settings() {
                       <Button variant="outline" onClick={() => setIsAddMemberOpen(false)}>
                         Cancel
                       </Button>
-                      <Button onClick={handleAddMember}>
-                        Send Invitation
+                      <Button 
+                        onClick={handleSendInvitation}
+                        disabled={sendInvitationMutation.isPending}
+                        data-testid="button-send-invitation"
+                      >
+                        {sendInvitationMutation.isPending ? "Sending..." : "Send Invitation"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -1187,38 +1249,48 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {teamMembers.map((member, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarFallback>
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                       <div>
-                         <h4 className="font-medium">{member.name}</h4>
-                         <p className="text-sm text-muted-foreground flex items-center">
-                           <Mail className="h-3 w-3 mr-1" />
-                           {member.email}
-                         </p>
-                         <p className="text-xs text-muted-foreground flex items-center mt-1">
-                           <Store className="h-3 w-3 mr-1" />
-                           {member.store}
-                         </p>
-                       </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Badge variant="outline">{member.role}</Badge>
-                      <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
-                        {member.status}
-                      </Badge>
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
-                    </div>
+                {teamMembers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No team members yet</p>
+                    <p className="text-sm">Start by inviting team members to join your organization</p>
                   </div>
-                ))}
+                ) : (
+                  teamMembers.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <Avatar>
+                          <AvatarFallback>
+                            {member.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                         <div>
+                           <h4 className="font-medium">{member.name}</h4>
+                           <p className="text-sm text-muted-foreground flex items-center">
+                             <Mail className="h-3 w-3 mr-1" />
+                             {member.email}
+                           </p>
+                           {member.storeName && (
+                             <p className="text-xs text-muted-foreground flex items-center mt-1">
+                               <Store className="h-3 w-3 mr-1" />
+                               {member.storeName}
+                             </p>
+                           )}
+                         </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Badge variant="outline">{member.role}</Badge>
+                        <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
+                          {member.status}
+                        </Badge>
+                        <Button variant="outline" size="sm" data-testid={`button-edit-member-${member.id}`}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
