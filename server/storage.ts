@@ -1,4 +1,4 @@
-import { users, companies, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, appearanceThemesSettings, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type AppearanceThemesSettings, type InsertAppearanceThemesSettings } from "@shared/schema";
+import { users, companies, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, appearanceThemesSettings, industriesCategories, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -79,6 +79,19 @@ export interface IStorage {
   createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase>;
   updatePurchase(id: string, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase>;
   deletePurchase(id: string, userId: string): Promise<void>;
+  
+  // Appearance theme settings operations
+  getAppearanceSettings(userId: string): Promise<AppearanceThemesSettings | undefined>;
+  createAppearanceSettings(settings: InsertAppearanceThemesSettings & { userId: string }): Promise<AppearanceThemesSettings>;
+  updateAppearanceSettings(userId: string, updates: Partial<InsertAppearanceThemesSettings>): Promise<AppearanceThemesSettings>;
+  
+  // Industries categories operations
+  getAllIndustriesCategories(): Promise<IndustryCategory[]>;
+  getActiveIndustriesCategories(): Promise<IndustryCategory[]>;
+  getIndustryCategoryById(id: string): Promise<IndustryCategory | undefined>;
+  createIndustryCategory(category: InsertIndustryCategory): Promise<IndustryCategory>;
+  updateIndustryCategory(id: string, updates: Partial<InsertIndustryCategory>): Promise<IndustryCategory>;
+  deleteIndustryCategory(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -729,6 +742,61 @@ export class DatabaseStorage implements IStorage {
       return await this.updateAppearanceSettings(userId, settingsData);
     } else {
       return await this.createAppearanceSettings({ ...settingsData, userId });
+    }
+  }
+
+  // Add missing interface methods
+  async getAppearanceSettings(userId: string): Promise<AppearanceThemesSettings | undefined> {
+    return this.getAppearanceSettingsByUserId(userId);
+  }
+
+  // Industries categories operations
+  async getAllIndustriesCategories(): Promise<IndustryCategory[]> {
+    return await db.select().from(industriesCategories);
+  }
+
+  async getActiveIndustriesCategories(): Promise<IndustryCategory[]> {
+    return await db.select().from(industriesCategories).where(eq(industriesCategories.isActive, true));
+  }
+
+  async getIndustryCategoryById(id: string): Promise<IndustryCategory | undefined> {
+    const [category] = await db
+      .select()
+      .from(industriesCategories)
+      .where(eq(industriesCategories.id, id));
+    return category || undefined;
+  }
+
+  async createIndustryCategory(categoryData: InsertIndustryCategory): Promise<IndustryCategory> {
+    const [category] = await db
+      .insert(industriesCategories)
+      .values(categoryData)
+      .returning();
+    return category;
+  }
+
+  async updateIndustryCategory(id: string, updates: Partial<InsertIndustryCategory>): Promise<IndustryCategory> {
+    const [category] = await db
+      .update(industriesCategories)
+      .set(updates)
+      .where(eq(industriesCategories.id, id))
+      .returning();
+    
+    if (!category) {
+      throw new Error("Industry category not found");
+    }
+    
+    return category;
+  }
+
+  async deleteIndustryCategory(id: string): Promise<void> {
+    const result = await db
+      .delete(industriesCategories)
+      .where(eq(industriesCategories.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Industry category not found");
     }
   }
 }

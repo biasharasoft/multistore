@@ -672,11 +672,11 @@ export default function Settings() {
                       <SelectValue placeholder="Select industry" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="retail">Retail</SelectItem>
-                      <SelectItem value="food">Food & Beverage</SelectItem>
-                      <SelectItem value="electronics">Electronics</SelectItem>
-                      <SelectItem value="fashion">Fashion</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {industries.map((industryItem: any) => (
+                        <SelectItem key={industryItem.id} value={industryItem.name}>
+                          {industryItem.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

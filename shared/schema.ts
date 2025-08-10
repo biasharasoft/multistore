@@ -437,3 +437,20 @@ export const insertAppearanceThemesSettingsSchema = createInsertSchema(appearanc
 
 export type InsertAppearanceThemesSettings = z.infer<typeof insertAppearanceThemesSettingsSchema>;
 export type AppearanceThemesSettings = typeof appearanceThemesSettings.$inferSelect;
+
+// Industries categories table
+export const industriesCategories = pgTable("industries_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Industries categories validation schemas
+export const insertIndustryCategorySchema = createInsertSchema(industriesCategories).pick({
+  name: true,
+  isActive: true,
+});
+
+export type InsertIndustryCategory = z.infer<typeof insertIndustryCategorySchema>;
+export type IndustryCategory = typeof industriesCategories.$inferSelect;
