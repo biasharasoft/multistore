@@ -280,6 +280,69 @@ export const insertProductSchema = createInsertSchema(products).pick({
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
 
+// Inventory table
+export const inventory = pgTable("inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  quantity: integer("quantity").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Inventory validation schemas
+export const insertInventorySchema = createInsertSchema(inventory).pick({
+  productId: true,
+  quantity: true,
+}).extend({
+  productId: z.string().min(1, "Product ID is required"),
+  quantity: z.number().min(0, "Quantity must be non-negative"),
+});
+
+export type InsertInventory = z.infer<typeof insertInventorySchema>;
+export type Inventory = typeof inventory.$inferSelect;
+
+// Inventory Batch table
+export const inventoryBatch = pgTable("inventory_batch", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  batchNumber: varchar("batch_number").notNull(),
+  quantity: integer("quantity").notNull().default(0),
+  totalCost: integer("total_cost").notNull().default(0), // Store as cents
+  buyingPrice: integer("buying_price").notNull().default(0), // Store as cents
+  retailPrice: integer("retail_price").notNull().default(0), // Store as cents
+  retailDiscount: integer("retail_discount").default(0), // Store as percentage * 100
+  wholesalerPrice: integer("wholesaler_price").notNull().default(0), // Store as cents
+  wholesalerDiscount: integer("wholesaler_discount").default(0), // Store as percentage * 100
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Inventory Batch validation schemas
+export const insertInventoryBatchSchema = createInsertSchema(inventoryBatch).pick({
+  productId: true,
+  batchNumber: true,
+  quantity: true,
+  totalCost: true,
+  buyingPrice: true,
+  retailPrice: true,
+  retailDiscount: true,
+  wholesalerPrice: true,
+  wholesalerDiscount: true,
+}).extend({
+  productId: z.string().min(1, "Product ID is required"),
+  batchNumber: z.string().min(1, "Batch number is required"),
+  quantity: z.number().min(0, "Quantity must be non-negative"),
+  totalCost: z.number().min(0, "Total cost must be non-negative"),
+  buyingPrice: z.number().min(0, "Buying price must be non-negative"),
+  retailPrice: z.number().min(0, "Retail price must be non-negative"),
+  retailDiscount: z.number().min(0).max(10000, "Discount must be valid").optional(),
+  wholesalerPrice: z.number().min(0, "Wholesaler price must be non-negative"),
+  wholesalerDiscount: z.number().min(0).max(10000, "Discount must be valid").optional(),
+});
+
+export type InsertInventoryBatch = z.infer<typeof insertInventoryBatchSchema>;
+export type InventoryBatch = typeof inventoryBatch.$inferSelect;
+
 // Suppliers table
 export const suppliers = pgTable("suppliers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -51,6 +51,20 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
 - All components and pages preserved from original project
 
 ## Recent Changes
+- **2025-08-10**: Created inventory management database schema
+  - Added inventory table with id, product_id, and quantity columns
+  - Added inventory_batch table with id, product_id, batch_number, quantity, total_cost, buying_price, retail_price, retail_discount, wholesaler_price, and wholesaler_discount columns
+  - Established foreign key relationships between both tables and products table with cascade delete
+  - Applied database migration successfully with new inventory tracking capabilities
+  - All monetary values stored as integers (cents) for precision
+  - All discount values stored as integers (percentage * 100) for accuracy
+- **2025-08-10**: Enhanced team member invitation system
+  - Completed backend implementation of team member management API routes
+  - Added database tables for team_members and team_invitations with role-based access control
+  - Implemented functional "Send Invitation" button in Settings page Team tab
+  - Added proper form validation and error handling for invitation workflow
+  - Team invitations include store-specific access control and expiration dates
+  - Successfully integrated real team member data display instead of mock data
 - **2025-08-10**: Implemented comprehensive Settings page save functionality
   - Added phone number field to users table with nullable column
   - Created appearance_themes_settings table for storing user preferences

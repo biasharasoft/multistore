@@ -80,12 +80,12 @@ export default function Settings() {
   });
 
   // Fetch team members
-  const { data: teamMembers = [] } = useQuery({
+  const { data: teamMembers = [] } = useQuery<any[]>({
     queryKey: ['/api/team-members'],
   });
 
   // Fetch user stores
-  const { data: userStores = [] } = useQuery({
+  const { data: userStores = [] } = useQuery<any[]>({
     queryKey: ['/api/stores'],
   });
 
@@ -627,38 +627,7 @@ export default function Settings() {
     });
   };
 
-  const handleAddMember = () => {
-    if (!newMemberName.trim() || !newMemberEmail.trim() || !newMemberRole || !newMemberStore) {
-      toast({
-        title: "Error",
-        description: "All fields are required.",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    const newMember = {
-      id: Math.max(...teamMembers.map(m => m.id)) + 1,
-      name: newMemberName.trim(),
-      email: newMemberEmail.trim(),
-      role: newMemberRole,
-      store: newMemberStore,
-      status: "pending" as const,
-    };
-
-    setTeamMembers([...teamMembers, newMember]);
-    
-    setNewMemberName("");
-    setNewMemberEmail("");
-    setNewMemberRole("");
-    setNewMemberStore("");
-    setIsAddMemberOpen(false);
-    
-    toast({
-      title: "Success",
-      description: `Team member "${newMember.name}" has been added and will receive an invitation email.`,
-    });
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -1221,7 +1190,7 @@ export default function Settings() {
                             <SelectValue placeholder="Select store (optional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">No specific store</SelectItem>
+                            <SelectItem value="none">No specific store</SelectItem>
                             {userStores.map((store) => (
                               <SelectItem key={store.id} value={store.name}>
                                 {store.name}
@@ -1261,7 +1230,7 @@ export default function Settings() {
                       <div className="flex items-center space-x-4">
                         <Avatar>
                           <AvatarFallback>
-                            {member.name.split(' ').map(n => n[0]).join('')}
+                            {member.name.split(' ').map((n: string) => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                          <div>
