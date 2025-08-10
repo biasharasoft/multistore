@@ -434,28 +434,7 @@ export default function Suppliers() {
                   data-testid="input-city"
                 />
               </div>
-              <div>
-                <Label htmlFor="country">Country</Label>
-                <Input 
-                  id="country" 
-                  placeholder="Country"
-                  value={supplierForm.country}
-                  onChange={(e) => setSupplierForm({ ...supplierForm, country: e.target.value })}
-                  data-testid="input-country"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="leadTime">Lead Time (Days)</Label>
-                <Input 
-                  id="leadTime" 
-                  type="number" 
-                  placeholder="7"
-                  value={supplierForm.leadTime}
-                  onChange={(e) => setSupplierForm({ ...supplierForm, leadTime: e.target.value })}
-                  data-testid="input-lead-time"
-                />
-              </div>
+
               <div className="col-span-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea 
