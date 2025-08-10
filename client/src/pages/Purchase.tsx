@@ -146,7 +146,7 @@ const Purchase = () => {
     // Convert prices to cents for storage
     const purchaseData = {
       productId: selectedProduct,
-      supplierId: selectedSupplier || undefined,
+      supplierId: selectedSupplier && selectedSupplier !== "none" ? selectedSupplier : undefined,
       quantity,
       totalCost: Math.round(totalCost * 100), // Convert to cents
       sellingPrice: Math.round(sellingPrice * 100), // Convert to cents
@@ -232,11 +232,11 @@ const Purchase = () => {
                     <SelectValue placeholder="Select a supplier (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No supplier selected</SelectItem>
+                    <SelectItem value="none">No supplier selected</SelectItem>
                     {suppliersLoading ? (
-                      <SelectItem value="" disabled>Loading suppliers...</SelectItem>
+                      <SelectItem value="loading" disabled>Loading suppliers...</SelectItem>
                     ) : suppliers.length === 0 ? (
-                      <SelectItem value="" disabled>No suppliers available</SelectItem>
+                      <SelectItem value="no-suppliers" disabled>No suppliers available</SelectItem>
                     ) : (
                       suppliers.map((supplier: any) => (
                         <SelectItem key={supplier.id} value={supplier.id}>
