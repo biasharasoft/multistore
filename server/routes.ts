@@ -13,7 +13,9 @@ import {
   insertRegionSchema,
   insertProductsCategorySchema,
   insertExpensesCategorySchema,
-  insertProductSchema
+  insertProductSchema,
+  insertSupplierSchema,
+  insertCustomerSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -722,6 +724,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting supplier:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to delete supplier' 
+      });
+    }
+  });
+
+  // Customers Routes
+  
+  // Get all customers
+  app.get('/api/customers', async (req, res) => {
+    try {
+      const customers = await storage.getAllCustomers();
+      res.json(customers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch customers' 
+      });
+    }
+  });
+
+  // Get active customers only
+  app.get('/api/customers/active', async (req, res) => {
+    try {
+      const activeCustomers = await storage.getActiveCustomers();
+      res.json(activeCustomers);
+    } catch (error) {
+      console.error('Error fetching active customers:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch active customers' 
+      });
+    }
+  });
+
+  // Get customers by category
+  app.get('/api/customers/category/:category', async (req, res) => {
+    try {
+      const { category } = req.params;
+      const categoryCustomers = await storage.getCustomersByCategory(category);
+      res.json(categoryCustomers);
+    } catch (error) {
+      console.error('Error fetching customers by category:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch customers by category' 
+      });
+    }
+  });
+
+  // Get customers by status
+  app.get('/api/customers/status/:status', async (req, res) => {
+    try {
+      const { status } = req.params;
+      const statusCustomers = await storage.getCustomersByStatus(status);
+      res.json(statusCustomers);
+    } catch (error) {
+      console.error('Error fetching customers by status:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch customers by status' 
+      });
+    }
+  });
+
+  // Get a specific customer by ID
+  app.get('/api/customers/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const customer = await storage.getCustomerById(id);
+      
+      if (!customer) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+      
+      res.json(customer);
+    } catch (error) {
+      console.error('Error fetching customer:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch customer' 
+      });
+    }
+  });
+
+  // Create a new customer
+  app.post('/api/customers', async (req, res) => {
+    try {
+      const customerData = insertCustomerSchema.parse(req.body);
+      const newCustomer = await storage.createCustomer(customerData);
+      
+      res.status(201).json(newCustomer);
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to create customer' 
+      });
+    }
+  });
+
+  // Update a customer
+  app.put('/api/customers/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertCustomerSchema.partial().parse(req.body);
+      
+      const updatedCustomer = await storage.updateCustomer(id, updates);
+      res.json(updatedCustomer);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update customer' 
+      });
+    }
+  });
+
+  // Delete a customer
+  app.delete('/api/customers/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCustomer(id);
+      res.json({ message: 'Customer deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to delete customer' 
       });
     }
   });

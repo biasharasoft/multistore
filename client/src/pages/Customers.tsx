@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -29,28 +32,15 @@ import {
   Star,
   UserCheck,
   TrendingUp,
-  Eye
+  Eye,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { Customer, InsertCustomer } from "@shared/schema";
+import { insertCustomerSchema } from "@shared/schema";
 
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  country: string;
-  dateJoined: string;
-  status: "active" | "inactive" | "vip";
-  totalOrders: number;
-  totalSpent: number;
-  lastOrder: string;
-  loyaltyPoints: number;
-  category: "retail" | "wholesale" | "corporate";
-  avatar?: string;
-  notes: string;
-}
+
 
 const Customers = () => {
   const { toast } = useToast();
@@ -61,113 +51,106 @@ const Customers = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
-  // Mock data
-  const customers: Customer[] = [
-    {
-      id: "1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-      phone: "+1 (555) 123-4567",
-      address: "123 Main St",
-      city: "New York",
-      country: "USA",
-      dateJoined: "2024-01-15",
-      status: "vip",
-      totalOrders: 45,
-      totalSpent: 12750.50,
-      lastOrder: "2024-01-10",
-      loyaltyPoints: 1275,
-      category: "retail",
-      notes: "Preferred customer, always pays on time"
+  // Fetch customers from API
+  const { data: customers = [], isLoading, error } = useQuery<Customer[]>({
+    queryKey: ['/api/customers'],
+    queryFn: () => fetch('/api/customers').then(res => res.json())
+  });
+
+  // Mutations for CRUD operations
+  const createCustomerMutation = useMutation({
+    mutationFn: (customerData: InsertCustomer) => 
+      apiRequest('/api/customers', {
+        method: 'POST',
+        body: JSON.stringify(customerData),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      setIsAddDialogOpen(false);
+      toast({
+        title: "Customer added",
+        description: "New customer has been successfully added.",
+      });
     },
-    {
-      id: "2",
-      name: "Jane Smith",
-      email: "jane.smith@company.com",
-      phone: "+1 (555) 987-6543",
-      address: "456 Business Ave",
-      city: "Los Angeles",
-      country: "USA",
-      dateJoined: "2023-11-20",
-      status: "active",
-      totalOrders: 23,
-      totalSpent: 8920.25,
-      lastOrder: "2024-01-08",
-      loyaltyPoints: 892,
-      category: "wholesale",
-      notes: "Bulk orders monthly"
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add customer",
+        variant: "destructive",
+      });
     },
-    {
-      id: "3",
-      name: "Acme Corporation",
-      email: "orders@acme.com",
-      phone: "+1 (555) 111-2222",
-      address: "789 Corporate Blvd",
-      city: "Chicago",
-      country: "USA",
-      dateJoined: "2023-06-10",
-      status: "active",
-      totalOrders: 78,
-      totalSpent: 45230.00,
-      lastOrder: "2024-01-12",
-      loyaltyPoints: 4523,
-      category: "corporate",
-      notes: "Large corporate account"
+  });
+
+  const updateCustomerMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<InsertCustomer> }) =>
+      apiRequest(`/api/customers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      setEditingCustomer(null);
+      toast({
+        title: "Customer updated",
+        description: "Customer information has been successfully updated.",
+      });
     },
-    {
-      id: "4",
-      name: "Sarah Johnson",
-      email: "sarah.j@email.com",
-      phone: "+1 (555) 444-5555",
-      address: "321 Residential St",
-      city: "Miami",
-      country: "USA",
-      dateJoined: "2024-01-05",
-      status: "inactive",
-      totalOrders: 3,
-      totalSpent: 245.75,
-      lastOrder: "2023-12-15",
-      loyaltyPoints: 25,
-      category: "retail",
-      notes: "New customer"
-    }
-  ];
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update customer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest(`/api/customers/${id}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      toast({
+        title: "Customer deleted",
+        description: "Customer has been successfully deleted.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete customer",
+        variant: "destructive",
+      });
+    },
+  });
 
   const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         customer.phone.includes(searchTerm);
+    const matchesSearch = customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         customer.phone?.includes(searchTerm);
     const matchesStatus = statusFilter === "all" || customer.status === statusFilter;
     const matchesCategory = categoryFilter === "all" || customer.category === categoryFilter;
     
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  const handleAddCustomer = () => {
-    setIsAddDialogOpen(false);
-    toast({
-      title: "Customer added",
-      description: "New customer has been successfully added.",
-    });
+  const handleAddCustomer = (data: InsertCustomer) => {
+    createCustomerMutation.mutate(data);
   };
 
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
   };
 
-  const handleUpdateCustomer = () => {
-    setEditingCustomer(null);
-    toast({
-      title: "Customer updated",
-      description: "Customer information has been successfully updated.",
-    });
+  const handleUpdateCustomer = (data: Partial<InsertCustomer>) => {
+    if (editingCustomer) {
+      updateCustomerMutation.mutate({ id: editingCustomer.id, data });
+    }
   };
 
   const handleDeleteCustomer = (customerId: string) => {
-    toast({
-      title: "Customer deleted",
-      description: "Customer has been successfully deleted.",
-    });
+    deleteCustomerMutation.mutate(customerId);
   };
 
   const getStatusBadge = (status: string) => {
@@ -188,70 +171,282 @@ const Customers = () => {
     return <Badge variant="outline" className={styles[category as keyof typeof styles]}>{category}</Badge>;
   };
 
-  const CustomerForm = ({ customer, onSubmit }: { customer?: Customer; onSubmit: () => void }) => (
-    <div className="grid gap-4 py-4">
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="name" className="text-right">Name</Label>
-        <Input id="name" defaultValue={customer?.name} className="col-span-3" />
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="email" className="text-right">Email</Label>
-        <Input id="email" type="email" defaultValue={customer?.email} className="col-span-3" />
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="phone" className="text-right">Phone</Label>
-        <Input id="phone" defaultValue={customer?.phone} className="col-span-3" />
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="address" className="text-right">Address</Label>
-        <Input id="address" defaultValue={customer?.address} className="col-span-3" />
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="city" className="text-right">City</Label>
-        <Input id="city" defaultValue={customer?.city} className="col-span-3" />
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="country" className="text-right">Country</Label>
-        <Input id="country" defaultValue={customer?.country} className="col-span-3" />
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="status" className="text-right">Status</Label>
-        <Select defaultValue={customer?.status || "active"}>
-          <SelectTrigger className="col-span-3">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="vip">VIP</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="idType" className="text-right">ID Type</Label>
-        <Select defaultValue="nida">
-          <SelectTrigger className="col-span-3">
-            <SelectValue placeholder="Select ID Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="nida">NIDA</SelectItem>
-            <SelectItem value="driverLicense">Driver License</SelectItem>
-            <SelectItem value="passport">Passport</SelectItem>
-            <SelectItem value="voterID">Voter ID</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="idNumber" className="text-right">ID Number</Label>
-        <Input id="idNumber" placeholder="Enter ID number" className="col-span-3" />
-      </div>
-    </div>
-  );
+  const CustomerForm = ({ customer, onSubmit, isSubmitting = false }: { customer?: Customer; onSubmit: (data: InsertCustomer) => void; isSubmitting?: boolean }) => {
+    const form = useForm<InsertCustomer>({
+      resolver: zodResolver(insertCustomerSchema),
+      defaultValues: {
+        name: customer?.name || "",
+        email: customer?.email || "",
+        phone: customer?.phone || "",
+        address: customer?.address || "",
+        city: customer?.city || "",
+        country: customer?.country || "",
+        status: customer?.status || "active",
+        category: customer?.category || "retail",
+        idType: customer?.idType || "nida",
+        idNumber: customer?.idNumber || "",
+        notes: customer?.notes || "",
+      },
+    });
+
+    return (
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4" data-testid="customer-form">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Name *</FormLabel>
+                  <div className="col-span-3">
+                    <FormControl>
+                      <Input {...field} data-testid="input-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Email</FormLabel>
+                  <div className="col-span-3">
+                    <FormControl>
+                      <Input type="email" {...field} data-testid="input-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Phone</FormLabel>
+                  <div className="col-span-3">
+                    <FormControl>
+                      <Input {...field} data-testid="input-phone" />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Address</FormLabel>
+                  <div className="col-span-3">
+                    <FormControl>
+                      <Input {...field} data-testid="input-address" />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">City</FormLabel>
+                  <div className="col-span-3">
+                    <FormControl>
+                      <Input {...field} data-testid="input-city" />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Country</FormLabel>
+                  <div className="col-span-3">
+                    <FormControl>
+                      <Input {...field} data-testid="input-country" />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Status</FormLabel>
+                  <div className="col-span-3">
+                    <Select onValueChange={field.onChange} defaultValue={field.value} data-testid="select-status">
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="vip">VIP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Category</FormLabel>
+                  <div className="col-span-3">
+                    <Select onValueChange={field.onChange} defaultValue={field.value} data-testid="select-category">
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="retail">Retail</SelectItem>
+                        <SelectItem value="wholesale">Wholesale</SelectItem>
+                        <SelectItem value="corporate">Corporate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="idType"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">ID Type</FormLabel>
+                  <div className="col-span-3">
+                    <Select onValueChange={field.onChange} defaultValue={field.value} data-testid="select-id-type">
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select ID Type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="nida">NIDA</SelectItem>
+                        <SelectItem value="driverLicense">Driver License</SelectItem>
+                        <SelectItem value="passport">Passport</SelectItem>
+                        <SelectItem value="voterID">Voter ID</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="idNumber"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">ID Number</FormLabel>
+                  <div className="col-span-3">
+                    <FormControl>
+                      <Input {...field} placeholder="Enter ID number" data-testid="input-id-number" />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Notes</FormLabel>
+                  <div className="col-span-3">
+                    <FormControl>
+                      <Textarea {...field} placeholder="Additional notes" data-testid="input-notes" />
+                    </FormControl>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              data-testid="button-submit-customer"
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {customer ? "Update Customer" : "Add Customer"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    );
+  };
 
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter(c => c.status === "active").length;
   const vipCustomers = customers.filter(c => c.status === "vip").length;
-  const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0);
+  const totalRevenue = customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -272,10 +467,7 @@ const Customers = () => {
                   Enter the customer details below.
                 </DialogDescription>
               </DialogHeader>
-              <CustomerForm onSubmit={handleAddCustomer} />
-              <DialogFooter>
-                <Button type="submit" onClick={handleAddCustomer}>Add Customer</Button>
-              </DialogFooter>
+              <CustomerForm onSubmit={handleAddCustomer} isSubmitting={createCustomerMutation.isPending} />
             </DialogContent>
           </Dialog>
         </div>
@@ -599,10 +791,7 @@ const Customers = () => {
               Update the customer information below.
             </DialogDescription>
           </DialogHeader>
-          <CustomerForm customer={editingCustomer || undefined} onSubmit={handleUpdateCustomer} />
-          <DialogFooter>
-            <Button type="submit" onClick={handleUpdateCustomer}>Update Customer</Button>
-          </DialogFooter>
+          <CustomerForm customer={editingCustomer || undefined} onSubmit={handleUpdateCustomer} isSubmitting={updateCustomerMutation.isPending} />
         </DialogContent>
       </Dialog>
     </div>

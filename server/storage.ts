@@ -1,4 +1,4 @@
-import { users, stores, regions, productsCategories, expensesCategories, products, suppliers, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier } from "@shared/schema";
+import { users, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -56,6 +56,16 @@ export interface IStorage {
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
   updateSupplier(id: string, updates: Partial<InsertSupplier>): Promise<Supplier>;
   deleteSupplier(id: string): Promise<void>;
+  
+  // Customers operations
+  getAllCustomers(): Promise<Customer[]>;
+  getActiveCustomers(): Promise<Customer[]>;
+  getCustomerById(id: string): Promise<Customer | undefined>;
+  getCustomersByCategory(category: string): Promise<Customer[]>;
+  getCustomersByStatus(status: string): Promise<Customer[]>;
+  createCustomer(customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer>;
+  deleteCustomer(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -445,6 +455,86 @@ export class DatabaseStorage implements IStorage {
     
     if (result.length === 0) {
       throw new Error("Supplier not found");
+    }
+  }
+
+  // Customers operations
+  async getAllCustomers(): Promise<Customer[]> {
+    const allCustomers = await db
+      .select()
+      .from(customers)
+      .orderBy(customers.name);
+    return allCustomers;
+  }
+
+  async getActiveCustomers(): Promise<Customer[]> {
+    const activeCustomers = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.status, "active"))
+      .orderBy(customers.name);
+    return activeCustomers;
+  }
+
+  async getCustomerById(id: string): Promise<Customer | undefined> {
+    const [customer] = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, id));
+    return customer || undefined;
+  }
+
+  async getCustomersByCategory(category: string): Promise<Customer[]> {
+    const categoryCustomers = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.category, category))
+      .orderBy(customers.name);
+    return categoryCustomers;
+  }
+
+  async getCustomersByStatus(status: string): Promise<Customer[]> {
+    const statusCustomers = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.status, status))
+      .orderBy(customers.name);
+    return statusCustomers;
+  }
+
+  async createCustomer(customerData: InsertCustomer): Promise<Customer> {
+    const [customer] = await db
+      .insert(customers)
+      .values(customerData)
+      .returning();
+    return customer;
+  }
+
+  async updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer> {
+    const [customer] = await db
+      .update(customers)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(customers.id, id))
+      .returning();
+    
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
+    
+    return customer;
+  }
+
+  async deleteCustomer(id: string): Promise<void> {
+    const result = await db
+      .delete(customers)
+      .where(eq(customers.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Customer not found");
     }
   }
 }
