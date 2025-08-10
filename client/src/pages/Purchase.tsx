@@ -1,4 +1,17 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+type Product = {
+  id: string;
+  name: string;
+  categoryId: string;
+  price: number;
+  cost: number;
+  stock: number;
+  description?: string;
+  barcode?: string;
+  status: string;
+};
 import { Plus, Search, Filter, Download, Eye, Edit, Power, Package, X, ShoppingCart, Calendar as CalendarIcon } from "lucide-react";
 import {
   Popover,
@@ -80,17 +93,10 @@ const Purchase = () => {
     }
   ];
 
-  // Mock data for products
-  const products = [
-    { id: "P001", name: "Smartphone", category: "Electronics", price: 15000, stock: 50 },
-    { id: "P002", name: "Laptop", category: "Electronics", price: 45000, stock: 25 },
-    { id: "P003", name: "Headphones", category: "Electronics", price: 3000, stock: 100 },
-    { id: "P004", name: "Tablet", category: "Electronics", price: 25000, stock: 30 },
-    { id: "P005", name: "Smart Watch", category: "Electronics", price: 8000, stock: 75 },
-    { id: "P006", name: "Camera", category: "Electronics", price: 35000, stock: 15 },
-    { id: "P007", name: "Bluetooth Speaker", category: "Electronics", price: 5000, stock: 60 },
-    { id: "P008", name: "Gaming Console", category: "Electronics", price: 55000, stock: 20 }
-  ];
+  // Fetch user's products from database
+  const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
+    queryKey: ['/api/products'],
+  });
 
   const suppliers = [
     { id: "sup1", name: "ABC Electronics" },
@@ -203,11 +209,17 @@ const Purchase = () => {
                     <SelectValue placeholder="Select a product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {products.map(product => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                    ))}
+                    {productsLoading ? (
+                      <SelectItem value="" disabled>Loading products...</SelectItem>
+                    ) : products.length === 0 ? (
+                      <SelectItem value="" disabled>No products available</SelectItem>
+                    ) : (
+                      products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
