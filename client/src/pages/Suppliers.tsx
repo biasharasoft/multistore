@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { Supplier, InsertSupplier } from "@shared/schema";
 import { 
   Search, 
   Plus, 
@@ -29,135 +33,151 @@ import {
   Users
 } from "lucide-react";
 
-interface Supplier {
-  id: string;
-  name: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  country: string;
-  category: string;
-  status: "active" | "inactive" | "pending";
-  rating: number;
-  totalOrders: number;
-  totalSpent: number;
-  lastOrderDate: string;
-  paymentTerms: string;
-  leadTime: number; // in days
-  description: string;
-  website?: string;
-}
-
-const mockSuppliers: Supplier[] = [
-  {
-    id: "1",
-    name: "Premium Coffee Co.",
-    contactPerson: "Maria Rodriguez",
-    email: "maria@premiumcoffee.com",
-    phone: "+1 (555) 123-4567",
-    address: "123 Coffee Street",
-    city: "Seattle",
-    country: "USA",
-    category: "Food & Beverages",
-    status: "active",
-    rating: 4.8,
-    totalOrders: 156,
-    totalSpent: 45670.50,
-    lastOrderDate: "2024-01-10",
-    paymentTerms: "Net 30",
-    leadTime: 7,
-    description: "Premium coffee bean supplier with organic certifications",
-    website: "https://premiumcoffee.com"
-  },
-  {
-    id: "2",
-    name: "Tech Solutions Ltd",
-    contactPerson: "John Chen",
-    email: "john@techsolutions.com",
-    phone: "+1 (555) 987-6543",
-    address: "456 Innovation Drive",
-    city: "San Francisco",
-    country: "USA",
-    category: "Electronics",
-    status: "active",
-    rating: 4.5,
-    totalOrders: 89,
-    totalSpent: 125340.75,
-    lastOrderDate: "2024-01-08",
-    paymentTerms: "Net 45",
-    leadTime: 14,
-    description: "Leading supplier of consumer electronics and gadgets"
-  },
-  {
-    id: "3",
-    name: "Organic Farms Supply",
-    contactPerson: "Sarah Johnson",
-    email: "sarah@organicfarms.com",
-    phone: "+1 (555) 456-7890",
-    address: "789 Green Valley Road",
-    city: "Portland",
-    country: "USA",
-    category: "Food & Beverages",
-    status: "active",
-    rating: 4.9,
-    totalOrders: 203,
-    totalSpent: 67890.25,
-    lastOrderDate: "2024-01-12",
-    paymentTerms: "Net 15",
-    leadTime: 5,
-    description: "Certified organic produce and health food supplier"
-  },
-  {
-    id: "4",
-    name: "Fitness Equipment Pro",
-    contactPerson: "Mike Wilson",
-    email: "mike@fitnesspro.com",
-    phone: "+1 (555) 321-0987",
-    address: "321 Strength Avenue",
-    city: "Denver",
-    country: "USA",
-    category: "Sports & Fitness",
-    status: "pending",
-    rating: 4.2,
-    totalOrders: 45,
-    totalSpent: 89750.00,
-    lastOrderDate: "2023-12-28",
-    paymentTerms: "Net 60",
-    leadTime: 21,
-    description: "Professional fitness equipment and accessories supplier"
-  },
-  {
-    id: "5",
-    name: "Global Textiles Inc",
-    contactPerson: "Lisa Zhang",
-    email: "lisa@globaltextiles.com",
-    phone: "+1 (555) 654-3210",
-    address: "654 Fabric Boulevard",
-    city: "Los Angeles",
-    country: "USA",
-    category: "Apparel",
-    status: "inactive",
-    rating: 3.8,
-    totalOrders: 67,
-    totalSpent: 34560.80,
-    lastOrderDate: "2023-11-15",
-    paymentTerms: "Net 30",
-    leadTime: 28,
-    description: "Wholesale textile and clothing supplier"
-  }
-];
-
 const categories = ["All", "Food & Beverages", "Electronics", "Sports & Fitness", "Apparel", "Office Supplies"];
 
+// Helper function to convert database supplier data for display
+const convertDbSupplierToFrontend = (dbSupplier: Supplier) => {
+  return {
+    ...dbSupplier,
+    contactPerson: dbSupplier.contactPerson || "",
+    email: dbSupplier.email || "",
+    phone: dbSupplier.phone || "",
+    address: dbSupplier.address || "",
+    city: dbSupplier.city || "",
+    state: dbSupplier.state || "",
+    zipCode: dbSupplier.zipCode || "",
+    country: dbSupplier.country || "",
+    category: dbSupplier.category || "",
+    paymentTerms: dbSupplier.paymentTerms || "",
+    description: dbSupplier.description || "",
+    website: dbSupplier.website || "",
+    rating: dbSupplier.rating ? dbSupplier.rating / 10 : 0, // Convert back from storage format
+    totalSpent: dbSupplier.totalSpent ? dbSupplier.totalSpent / 100 : 0, // Convert back from cents
+    totalOrders: dbSupplier.totalOrders || 0,
+    leadTime: dbSupplier.leadTime || 0,
+    lastOrderDate: dbSupplier.lastOrderDate ? new Date(dbSupplier.lastOrderDate).toISOString().split('T')[0] : "",
+  };
+};
+
 export default function Suppliers() {
-  const [suppliers] = useState<Supplier[]>(mockSuppliers);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // API Queries
+  const { data: dbSuppliers = [], isLoading } = useQuery<Supplier[]>({
+    queryKey: ['/api/suppliers'],
+  });
+  
+  // Convert database data for display
+  const suppliers = dbSuppliers.map(convertDbSupplierToFrontend);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
+
+  // Form state for adding new supplier
+  const [supplierForm, setSupplierForm] = useState({
+    name: "",
+    contactPerson: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
+    category: "",
+    status: "active" as "active" | "inactive" | "pending",
+    rating: "",
+    totalOrders: "",
+    totalSpent: "",
+    paymentTerms: "",
+    leadTime: "",
+    description: "",
+    website: "",
+  });
+
+  // Create supplier mutation
+  const createSupplierMutation = useMutation({
+    mutationFn: async (supplierData: InsertSupplier) => {
+      return apiRequest('/api/suppliers', {
+        method: 'POST',
+        body: JSON.stringify(supplierData),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Supplier created successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/suppliers'] });
+      setIsAddSupplierOpen(false);
+      // Reset form
+      setSupplierForm({
+        name: "",
+        contactPerson: "",
+        email: "",
+        phone: "",
+        address: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        country: "",
+        category: "",
+        status: "active",
+        rating: "",
+        totalOrders: "",
+        totalSpent: "",
+        paymentTerms: "",
+        leadTime: "",
+        description: "",
+        website: "",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create supplier: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle form submission
+  const handleAddSupplier = () => {
+    try {
+      // Convert form data to proper types
+      const supplierData: InsertSupplier = {
+        name: supplierForm.name,
+        contactPerson: supplierForm.contactPerson || undefined,
+        email: supplierForm.email || undefined,
+        phone: supplierForm.phone || undefined,
+        address: supplierForm.address || undefined,
+        city: supplierForm.city || undefined,
+        state: supplierForm.state || undefined,
+        zipCode: supplierForm.zipCode || undefined,
+        country: supplierForm.country || undefined,
+        category: supplierForm.category || undefined,
+        status: supplierForm.status,
+        rating: supplierForm.rating ? parseInt(supplierForm.rating) : undefined,
+        totalOrders: supplierForm.totalOrders ? parseInt(supplierForm.totalOrders) : undefined,
+        totalSpent: supplierForm.totalSpent ? parseInt(supplierForm.totalSpent) : undefined,
+        paymentTerms: supplierForm.paymentTerms || undefined,
+        leadTime: supplierForm.leadTime ? parseInt(supplierForm.leadTime) : undefined,
+        description: supplierForm.description || undefined,
+        website: supplierForm.website || undefined,
+      };
+
+      createSupplierMutation.mutate(supplierData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Please check your form data and try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredSuppliers = suppliers.filter(supplier => {
     const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -338,82 +358,148 @@ export default function Suppliers() {
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
               <div>
-                <Label htmlFor="supplierName">Company Name</Label>
-                <Input id="supplierName" placeholder="Enter company name" />
+                <Label htmlFor="supplierName">Company Name *</Label>
+                <Input 
+                  id="supplierName" 
+                  placeholder="Enter company name"
+                  value={supplierForm.name}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                  data-testid="input-supplier-name"
+                />
               </div>
               <div>
                 <Label htmlFor="contactPerson">Contact Person</Label>
-                <Input id="contactPerson" placeholder="Contact person name" />
+                <Input 
+                  id="contactPerson" 
+                  placeholder="Contact person name"
+                  value={supplierForm.contactPerson}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, contactPerson: e.target.value })}
+                  data-testid="input-contact-person"
+                />
               </div>
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="contact@supplier.com" />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="contact@supplier.com"
+                  value={supplierForm.email}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+                  data-testid="input-email"
+                />
               </div>
               <div>
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" placeholder="+1 (555) 123-4567" />
+                <Input 
+                  id="phone" 
+                  placeholder="+1 (555) 123-4567"
+                  value={supplierForm.phone}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
+                  data-testid="input-phone"
+                />
               </div>
               <div>
                 <Label htmlFor="category">Category</Label>
-                <Select>
-                  <SelectTrigger>
+                <Select value={supplierForm.category} onValueChange={(value) => setSupplierForm({ ...supplierForm, category: value })}>
+                  <SelectTrigger data-testid="select-category">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="food-beverages">Food & Beverages</SelectItem>
-                    <SelectItem value="electronics">Electronics</SelectItem>
-                    <SelectItem value="sports-fitness">Sports & Fitness</SelectItem>
-                    <SelectItem value="apparel">Apparel</SelectItem>
-                    <SelectItem value="office-supplies">Office Supplies</SelectItem>
+                    <SelectItem value="Food & Beverages">Food & Beverages</SelectItem>
+                    <SelectItem value="Electronics">Electronics</SelectItem>
+                    <SelectItem value="Sports & Fitness">Sports & Fitness</SelectItem>
+                    <SelectItem value="Apparel">Apparel</SelectItem>
+                    <SelectItem value="Office Supplies">Office Supplies</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="website">Website (Optional)</Label>
-                <Input id="website" placeholder="https://supplier.com" />
+                <Input 
+                  id="website" 
+                  placeholder="https://supplier.com"
+                  value={supplierForm.website}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, website: e.target.value })}
+                  data-testid="input-website"
+                />
               </div>
               <div className="col-span-2">
                 <Label htmlFor="address">Address</Label>
-                <Input id="address" placeholder="Street address" />
+                <Input 
+                  id="address" 
+                  placeholder="Street address"
+                  value={supplierForm.address}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
+                  data-testid="input-address"
+                />
               </div>
               <div>
                 <Label htmlFor="city">City</Label>
-                <Input id="city" placeholder="City" />
+                <Input 
+                  id="city" 
+                  placeholder="City"
+                  value={supplierForm.city}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, city: e.target.value })}
+                  data-testid="input-city"
+                />
               </div>
               <div>
                 <Label htmlFor="country">Country</Label>
-                <Input id="country" placeholder="Country" />
+                <Input 
+                  id="country" 
+                  placeholder="Country"
+                  value={supplierForm.country}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, country: e.target.value })}
+                  data-testid="input-country"
+                />
               </div>
               <div>
                 <Label htmlFor="paymentTerms">Payment Terms</Label>
-                <Select>
-                  <SelectTrigger>
+                <Select value={supplierForm.paymentTerms} onValueChange={(value) => setSupplierForm({ ...supplierForm, paymentTerms: value })}>
+                  <SelectTrigger data-testid="select-payment-terms">
                     <SelectValue placeholder="Select payment terms" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="net-15">Net 15</SelectItem>
-                    <SelectItem value="net-30">Net 30</SelectItem>
-                    <SelectItem value="net-45">Net 45</SelectItem>
-                    <SelectItem value="net-60">Net 60</SelectItem>
-                    <SelectItem value="cod">Cash on Delivery</SelectItem>
+                    <SelectItem value="Net 15">Net 15</SelectItem>
+                    <SelectItem value="Net 30">Net 30</SelectItem>
+                    <SelectItem value="Net 45">Net 45</SelectItem>
+                    <SelectItem value="Net 60">Net 60</SelectItem>
+                    <SelectItem value="Cash on Delivery">Cash on Delivery</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="leadTime">Lead Time (Days)</Label>
-                <Input id="leadTime" type="number" placeholder="7" />
+                <Input 
+                  id="leadTime" 
+                  type="number" 
+                  placeholder="7"
+                  value={supplierForm.leadTime}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, leadTime: e.target.value })}
+                  data-testid="input-lead-time"
+                />
               </div>
               <div className="col-span-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" placeholder="Supplier description and notes" />
+                <Textarea 
+                  id="description" 
+                  placeholder="Supplier description and notes"
+                  value={supplierForm.description}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, description: e.target.value })}
+                  data-testid="input-description"
+                />
               </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsAddSupplierOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => setIsAddSupplierOpen(false)}>
-                Add Supplier
+              <Button 
+                onClick={handleAddSupplier}
+                disabled={createSupplierMutation.isPending || !supplierForm.name}
+                data-testid="button-add-supplier"
+              >
+                {createSupplierMutation.isPending ? "Adding..." : "Add Supplier"}
               </Button>
             </div>
           </DialogContent>

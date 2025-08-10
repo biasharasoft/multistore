@@ -244,3 +244,64 @@ export const insertProductSchema = createInsertSchema(products).pick({
 
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
+
+// Suppliers table
+export const suppliers = pgTable("suppliers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  contactPerson: varchar("contact_person"),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  address: text("address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  zipCode: varchar("zip_code"),
+  country: varchar("country"),
+  category: varchar("category"),
+  status: varchar("status").notNull().default("active"), // active, inactive, pending
+  rating: integer("rating").default(0), // Store as rating * 10 (e.g., 48 for 4.8)
+  totalOrders: integer("total_orders").default(0),
+  totalSpent: integer("total_spent").default(0), // Store as cents
+  lastOrderDate: timestamp("last_order_date"),
+  paymentTerms: varchar("payment_terms"),
+  leadTime: integer("lead_time").default(0), // in days
+  description: text("description"),
+  website: varchar("website"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Suppliers validation schemas
+export const insertSupplierSchema = createInsertSchema(suppliers).pick({
+  name: true,
+  contactPerson: true,
+  email: true,
+  phone: true,
+  address: true,
+  city: true,
+  state: true,
+  zipCode: true,
+  country: true,
+  category: true,
+  status: true,
+  rating: true,
+  totalOrders: true,
+  totalSpent: true,
+  lastOrderDate: true,
+  paymentTerms: true,
+  leadTime: true,
+  description: true,
+  website: true,
+}).extend({
+  name: z.string().min(1, "Supplier name is required"),
+  email: z.string().email("Valid email is required").optional().or(z.literal("")),
+  phone: z.string().optional(),
+  status: z.enum(["active", "inactive", "pending"]).optional(),
+  rating: z.number().min(0).max(50).optional(), // 0-50 for 0.0-5.0 rating
+  totalOrders: z.number().min(0).optional(),
+  totalSpent: z.number().min(0).optional(),
+  leadTime: z.number().min(0).optional(),
+});
+
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+export type Supplier = typeof suppliers.$inferSelect;

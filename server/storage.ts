@@ -1,4 +1,4 @@
-import { users, stores, regions, productsCategories, expensesCategories, products, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct } from "@shared/schema";
+import { users, stores, regions, productsCategories, expensesCategories, products, suppliers, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -47,6 +47,15 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product>;
   deleteProduct(id: string): Promise<void>;
+  
+  // Suppliers operations
+  getAllSuppliers(): Promise<Supplier[]>;
+  getActiveSuppliers(): Promise<Supplier[]>;
+  getSupplierById(id: string): Promise<Supplier | undefined>;
+  getSuppliersByCategory(category: string): Promise<Supplier[]>;
+  createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  updateSupplier(id: string, updates: Partial<InsertSupplier>): Promise<Supplier>;
+  deleteSupplier(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -294,7 +303,7 @@ export class DatabaseStorage implements IStorage {
     const [product] = await db
       .select()
       .from(products)
-      .where(eq(products.sku, sku));
+      .where(eq(products.barcode, sku));
     return product || undefined;
   }
 
@@ -365,6 +374,77 @@ export class DatabaseStorage implements IStorage {
     
     if (result.length === 0) {
       throw new Error("Product not found");
+    }
+  }
+
+  // Suppliers operations
+  async getAllSuppliers(): Promise<Supplier[]> {
+    const allSuppliers = await db
+      .select()
+      .from(suppliers)
+      .orderBy(suppliers.name);
+    return allSuppliers;
+  }
+
+  async getActiveSuppliers(): Promise<Supplier[]> {
+    const activeSuppliers = await db
+      .select()
+      .from(suppliers)
+      .where(eq(suppliers.status, "active"))
+      .orderBy(suppliers.name);
+    return activeSuppliers;
+  }
+
+  async getSupplierById(id: string): Promise<Supplier | undefined> {
+    const [supplier] = await db
+      .select()
+      .from(suppliers)
+      .where(eq(suppliers.id, id));
+    return supplier || undefined;
+  }
+
+  async getSuppliersByCategory(category: string): Promise<Supplier[]> {
+    const categorySuppliers = await db
+      .select()
+      .from(suppliers)
+      .where(eq(suppliers.category, category))
+      .orderBy(suppliers.name);
+    return categorySuppliers;
+  }
+
+  async createSupplier(supplierData: InsertSupplier): Promise<Supplier> {
+    const [supplier] = await db
+      .insert(suppliers)
+      .values(supplierData)
+      .returning();
+    return supplier;
+  }
+
+  async updateSupplier(id: string, updates: Partial<InsertSupplier>): Promise<Supplier> {
+    const [supplier] = await db
+      .update(suppliers)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(suppliers.id, id))
+      .returning();
+    
+    if (!supplier) {
+      throw new Error("Supplier not found");
+    }
+    
+    return supplier;
+  }
+
+  async deleteSupplier(id: string): Promise<void> {
+    const result = await db
+      .delete(suppliers)
+      .where(eq(suppliers.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Supplier not found");
     }
   }
 }

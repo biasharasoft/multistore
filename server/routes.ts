@@ -608,6 +608,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Suppliers Routes
+  
+  // Get all suppliers
+  app.get('/api/suppliers', async (req, res) => {
+    try {
+      const suppliers = await storage.getAllSuppliers();
+      res.json(suppliers);
+    } catch (error) {
+      console.error('Error fetching suppliers:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch suppliers' 
+      });
+    }
+  });
+
+  // Get active suppliers only
+  app.get('/api/suppliers/active', async (req, res) => {
+    try {
+      const activeSuppliers = await storage.getActiveSuppliers();
+      res.json(activeSuppliers);
+    } catch (error) {
+      console.error('Error fetching active suppliers:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch active suppliers' 
+      });
+    }
+  });
+
+  // Get a specific supplier by ID
+  app.get('/api/suppliers/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const supplier = await storage.getSupplierById(id);
+      
+      if (!supplier) {
+        return res.status(404).json({ message: 'Supplier not found' });
+      }
+      
+      res.json(supplier);
+    } catch (error) {
+      console.error('Error fetching supplier:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch supplier' 
+      });
+    }
+  });
+
+  // Create a new supplier
+  app.post('/api/suppliers', async (req, res) => {
+    try {
+      const { insertSupplierSchema } = await import('@shared/schema');
+      
+      // Convert rating from percentage to decimal and money values to cents where needed
+      const supplierData = { ...req.body };
+      if (supplierData.rating !== undefined) {
+        supplierData.rating = Math.round(parseFloat(supplierData.rating) * 10); // Store rating * 10
+      }
+      if (supplierData.totalSpent !== undefined) {
+        supplierData.totalSpent = Math.round(parseFloat(supplierData.totalSpent) * 100); // Store as cents
+      }
+      
+      console.log('Raw supplier data:', req.body);
+      console.log('Processed supplier data:', supplierData);
+      
+      const validatedData = insertSupplierSchema.parse(supplierData);
+      console.log('Validated supplier data:', validatedData);
+      
+      const newSupplier = await storage.createSupplier(validatedData);
+      
+      res.status(201).json(newSupplier);
+    } catch (error) {
+      console.error('Error creating supplier:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to create supplier' 
+      });
+    }
+  });
+
+  // Update a supplier
+  app.put('/api/suppliers/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { insertSupplierSchema } = await import('@shared/schema');
+      
+      // Convert values as needed
+      const updates = { ...req.body };
+      if (updates.rating !== undefined) {
+        updates.rating = Math.round(parseFloat(updates.rating) * 10);
+      }
+      if (updates.totalSpent !== undefined) {
+        updates.totalSpent = Math.round(parseFloat(updates.totalSpent) * 100);
+      }
+      
+      const validatedUpdates = insertSupplierSchema.partial().parse(updates);
+      const updatedSupplier = await storage.updateSupplier(id, validatedUpdates);
+      res.json(updatedSupplier);
+    } catch (error) {
+      console.error('Error updating supplier:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update supplier' 
+      });
+    }
+  });
+
+  // Delete a supplier
+  app.delete('/api/suppliers/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteSupplier(id);
+      res.json({ message: 'Supplier deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting supplier:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to delete supplier' 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
