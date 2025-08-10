@@ -100,6 +100,13 @@ export default function Settings() {
     }
   }, [industries, isLoadingIndustries, industriesError]);
 
+  // Debug log for user data and phone field
+  useEffect(() => {
+    console.log('User auth data:', userAuth);
+    console.log('Phone value from user:', userAuth?.user?.phone);
+    console.log('Current phone state:', phone);
+  }, [userAuth, phone]);
+
   // Profile form states
   const [firstName, setFirstName] = useState(userAuth?.user?.firstName || "");
   const [lastName, setLastName] = useState(userAuth?.user?.lastName || "");
