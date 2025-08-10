@@ -94,6 +94,37 @@ export type VerifyOtpData = z.infer<typeof verifyOtpSchema>;
 export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 export type NewPasswordData = z.infer<typeof newPasswordSchema>;
 
+// Companies table
+export const companies = pgTable("companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  industry: varchar("industry"),
+  website: varchar("website"),
+  address: text("address"),
+  currency: varchar("currency").default("tzs"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Company validation schemas
+export const insertCompanySchema = createInsertSchema(companies).pick({
+  name: true,
+  industry: true,
+  website: true,
+  address: true,
+  currency: true,
+}).extend({
+  name: z.string().min(1, "Company name is required"),
+  industry: z.string().optional(),
+  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
+  address: z.string().optional(),
+  currency: z.string().optional(),
+});
+
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type Company = typeof companies.$inferSelect;
+
 // Stores table
 export const stores = pgTable("stores", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -16,7 +16,8 @@ import {
   insertProductSchema,
   insertSupplierSchema,
   insertCustomerSchema,
-  insertPurchaseSchema
+  insertPurchaseSchema,
+  insertCompanySchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -232,6 +233,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting store:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to delete store' 
+      });
+    }
+  });
+
+  // Companies Routes
+  
+  // Get company for the authenticated user
+  app.get('/api/companies', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const userCompany = await storage.getCompanyByUserId(userId);
+      res.json(userCompany);
+    } catch (error) {
+      console.error('Error fetching company:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch company' 
+      });
+    }
+  });
+
+  // Create or update company information
+  app.post('/api/companies', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const companyData = insertCompanySchema.parse(req.body);
+      
+      // Check if company already exists for this user
+      const existingCompany = await storage.getCompanyByUserId(userId);
+      
+      if (existingCompany) {
+        // Update existing company
+        const updatedCompany = await storage.updateCompany(existingCompany.id, userId, companyData);
+        res.json(updatedCompany);
+      } else {
+        // Create new company
+        const newCompany = await storage.createCompany({
+          ...companyData,
+          userId,
+        });
+        res.status(201).json(newCompany);
+      }
+    } catch (error) {
+      console.error('Error saving company:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to save company' 
+      });
+    }
+  });
+
+  // Update company information
+  app.put('/api/companies/:id', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      const updates = insertCompanySchema.partial().parse(req.body);
+      
+      const updatedCompany = await storage.updateCompany(id, userId, updates);
+      res.json(updatedCompany);
+    } catch (error) {
+      console.error('Error updating company:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update company' 
       });
     }
   });

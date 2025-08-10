@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory } from "@shared/schema";
+import { type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Company, type InsertCompany } from "@shared/schema";
 import { 
   Settings as SettingsIcon,
   User,
@@ -75,6 +75,29 @@ export default function Settings() {
   const { data: stores = [] } = useQuery<any[]>({
     queryKey: ['/api/stores'],
   });
+
+  // Fetch company data
+  const { data: companyData } = useQuery<Company>({
+    queryKey: ['/api/companies'],
+  });
+
+  // Company form states
+  const [companyName, setCompanyName] = useState(companyData?.name || "");
+  const [industry, setIndustry] = useState(companyData?.industry || "");
+  const [website, setWebsite] = useState(companyData?.website || "");
+  const [businessAddress, setBusinessAddress] = useState(companyData?.address || "");
+  const [currency, setCurrency] = useState(companyData?.currency || "tzs");
+
+  // Populate form fields when company data is loaded
+  useEffect(() => {
+    if (companyData) {
+      setCompanyName(companyData.name || "");
+      setIndustry(companyData.industry || "");
+      setWebsite(companyData.website || "");
+      setBusinessAddress(companyData.address || "");
+      setCurrency(companyData.currency || "tzs");
+    }
+  }, [companyData]);
 
 
   // Create products category mutation
@@ -182,6 +205,31 @@ export default function Settings() {
       toast({
         title: "Error",
         description: "Failed to update expense category. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Save company mutation
+  const saveCompanyMutation = useMutation({
+    mutationFn: async (data: InsertCompany) => {
+      return await apiRequest('/api/companies', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/companies'] });
+      toast({
+        title: "Success",
+        description: "Company information has been saved successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error saving company:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save company information. Please try again.",
         variant: "destructive",
       });
     },
@@ -298,6 +346,25 @@ export default function Settings() {
     }
   };
 
+  const handleSaveCompany = () => {
+    if (!companyName.trim()) {
+      toast({
+        title: "Error",
+        description: "Company name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    saveCompanyMutation.mutate({
+      name: companyName.trim(),
+      industry: industry || undefined,
+      website: website || undefined,
+      address: businessAddress || undefined,
+      currency: currency,
+    });
+  };
+
   const handleAddMember = () => {
     if (!newMemberName.trim() || !newMemberEmail.trim() || !newMemberRole || !newMemberStore) {
       toast({
@@ -341,9 +408,13 @@ export default function Settings() {
             Manage your account, stores, and system preferences
           </p>
         </div>
-        <Button>
+        <Button 
+          onClick={handleSaveCompany}
+          disabled={saveCompanyMutation.isPending}
+          data-testid="button-save-changes"
+        >
           <Save className="h-4 w-4 mr-2" />
-          Save Changes
+          {saveCompanyMutation.isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>
 
@@ -433,14 +504,20 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Company Name</Label>
-                  <Input id="companyName" defaultValue="BiasharaSoft" />
+                  <Input 
+                    id="companyName" 
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Enter company name"
+                    data-testid="input-company-name"
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="industry">Industry</Label>
-                  <Select defaultValue="retail">
-                    <SelectTrigger>
-                      <SelectValue />
+                  <Select value={industry} onValueChange={setIndustry}>
+                    <SelectTrigger data-testid="select-industry">
+                      <SelectValue placeholder="Select industry" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="retail">Retail</SelectItem>
@@ -454,22 +531,31 @@ export default function Settings() {
 
                 <div className="space-y-2">
                   <Label htmlFor="website">Website</Label>
-                  <Input id="website" defaultValue="https://biasharasoft.com" />
+                  <Input 
+                    id="website" 
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder="https://yourcompany.com"
+                    data-testid="input-website"
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="address">Business Address</Label>
                   <Textarea 
                     id="address" 
-                    defaultValue="123 Business Ave, Suite 100&#10;New York, NY 10001"
+                    value={businessAddress}
+                    onChange={(e) => setBusinessAddress(e.target.value)}
+                    placeholder="Enter business address"
                     rows={3}
+                    data-testid="textarea-address"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="currency">Default Currency</Label>
-                  <Select defaultValue="tzs">
-                    <SelectTrigger>
+                  <Select value={currency} onValueChange={setCurrency}>
+                    <SelectTrigger data-testid="select-currency">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

@@ -1,4 +1,4 @@
-import { users, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase } from "@shared/schema";
+import { users, companies, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -8,6 +8,13 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // Company operations
+  getCompanyByUserId(userId: string): Promise<Company | undefined>;
+  getCompanyById(id: string): Promise<Company | undefined>;
+  createCompany(company: InsertCompany & { userId: string }): Promise<Company>;
+  updateCompany(id: string, userId: string, updates: Partial<InsertCompany>): Promise<Company>;
+  deleteCompany(id: string, userId: string): Promise<void>;
   
   // Store operations
   getStoresByUserId(userId: string): Promise<Store[]>;
@@ -92,6 +99,54 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+
+  // Company operations
+  async getCompanyByUserId(userId: string): Promise<Company | undefined> {
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.userId, userId));
+    return company || undefined;
+  }
+
+  async getCompanyById(id: string): Promise<Company | undefined> {
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, id));
+    return company || undefined;
+  }
+
+  async createCompany(companyData: InsertCompany & { userId: string }): Promise<Company> {
+    const [company] = await db
+      .insert(companies)
+      .values(companyData)
+      .returning();
+    return company;
+  }
+
+  async updateCompany(id: string, userId: string, updates: Partial<InsertCompany>): Promise<Company> {
+    const [company] = await db
+      .update(companies)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(companies.id, id), eq(companies.userId, userId)))
+      .returning();
+    
+    if (!company) {
+      throw new Error('Company not found or access denied');
+    }
+    
+    return company;
+  }
+
+  async deleteCompany(id: string, userId: string): Promise<void> {
+    await db
+      .delete(companies)
+      .where(and(eq(companies.id, id), eq(companies.userId, userId)));
   }
 
   // Store operations
@@ -502,18 +557,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCustomer(customerData: InsertCustomer): Promise<Customer> {
+    // Convert dateOfBirth string to Date if present
+    const insertData = { ...customerData };
+    if (insertData.dateOfBirth && typeof insertData.dateOfBirth === 'string') {
+      insertData.dateOfBirth = new Date(insertData.dateOfBirth);
+    }
+    
     const [customer] = await db
       .insert(customers)
-      .values(customerData)
+      .values([insertData])
       .returning();
     return customer;
   }
 
   async updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer> {
+    // Convert dateOfBirth string to Date if present
+    const updateData: any = { ...updates };
+    if (updateData.dateOfBirth && typeof updateData.dateOfBirth === 'string') {
+      updateData.dateOfBirth = new Date(updateData.dateOfBirth);
+    }
+    
     const [customer] = await db
       .update(customers)
       .set({
-        ...updates,
+        ...updateData,
         updatedAt: new Date(),
       })
       .where(eq(customers.id, id))
@@ -556,18 +623,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPurchase(purchaseData: InsertPurchase & { userId: string }): Promise<Purchase> {
+    // Convert purchaseDate string to Date if present
+    const insertData: any = { ...purchaseData };
+    if (insertData.purchaseDate && typeof insertData.purchaseDate === 'string') {
+      insertData.purchaseDate = new Date(insertData.purchaseDate);
+    }
+    
     const [purchase] = await db
       .insert(purchases)
-      .values(purchaseData)
+      .values([insertData])
       .returning();
     return purchase;
   }
 
   async updatePurchase(id: string, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase> {
+    // Convert purchaseDate string to Date if present
+    const updateData: any = { ...updates };
+    if (updateData.purchaseDate && typeof updateData.purchaseDate === 'string') {
+      updateData.purchaseDate = new Date(updateData.purchaseDate);
+    }
+    
     const [purchase] = await db
       .update(purchases)
       .set({
-        ...updates,
+        ...updateData,
         updatedAt: new Date(),
       })
       .where(and(eq(purchases.id, id), eq(purchases.userId, userId)))
