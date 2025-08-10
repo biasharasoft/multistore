@@ -42,6 +42,7 @@ const Purchase = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState("");
+  const [selectedSupplier, setSelectedSupplier] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [totalCost, setTotalCost] = useState(0);
   const [sellingPrice, setSellingPrice] = useState(0);
@@ -52,7 +53,7 @@ const Purchase = () => {
   const [endDate, setEndDate] = useState<Date>();
 
   // Fetch user's purchases from database
-  const { data: purchases = [], isLoading: purchasesLoading } = useQuery({
+  const { data: purchases = [], isLoading: purchasesLoading } = useQuery<any[]>({
     queryKey: ['/api/purchases'],
   });
 
@@ -61,10 +62,16 @@ const Purchase = () => {
     queryKey: ['/api/products'],
   });
 
+  // Fetch user's suppliers from database
+  const { data: suppliers = [], isLoading: suppliersLoading } = useQuery<any[]>({
+    queryKey: ['/api/suppliers'],
+  });
+
   // Create purchase mutation
   const createPurchaseMutation = useMutation({
     mutationFn: async (purchaseData: {
       productId: string;
+      supplierId: string;
       quantity: number;
       totalCost: number;
       sellingPrice: number;
@@ -73,7 +80,10 @@ const Purchase = () => {
     }) => {
       return apiRequest('/api/purchases', {
         method: 'POST',
-        body: purchaseData,
+        body: JSON.stringify(purchaseData),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     },
     onSuccess: () => {
@@ -85,6 +95,7 @@ const Purchase = () => {
       setIsAddDialogOpen(false);
       // Reset form
       setSelectedProduct("");
+      setSelectedSupplier("");
       setQuantity(1);
       setTotalCost(0);
       setSellingPrice(0);
@@ -100,19 +111,7 @@ const Purchase = () => {
     }
   });
 
-  const suppliers = [
-    { id: "sup1", name: "ABC Electronics" },
-    { id: "sup2", name: "XYZ Components" },
-    { id: "sup3", name: "Tech Supplies Co" },
-    { id: "sup4", name: "Global Parts Ltd" }
-  ];
 
-  const stores = [
-    { id: "store1", name: "Main Store" },
-    { id: "store2", name: "Branch 1" },
-    { id: "store3", name: "Branch 2" },
-    { id: "store4", name: "Warehouse" }
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -136,7 +135,7 @@ const Purchase = () => {
   });
 
   const handleAddPurchase = () => {
-    if (!selectedProduct || quantity <= 0 || totalCost <= 0) {
+    if (!selectedProduct || !selectedSupplier || quantity <= 0 || totalCost <= 0) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields with valid values."
@@ -147,6 +146,7 @@ const Purchase = () => {
     // Convert prices to cents for storage
     const purchaseData = {
       productId: selectedProduct,
+      supplierId: selectedSupplier,
       quantity,
       totalCost: Math.round(totalCost * 100), // Convert to cents
       sellingPrice: Math.round(sellingPrice * 100), // Convert to cents
@@ -157,12 +157,12 @@ const Purchase = () => {
     createPurchaseMutation.mutate(purchaseData);
   };
 
-  const handleEditPurchase = (purchase) => {
+  const handleEditPurchase = (purchase: any) => {
     setEditingPurchase(purchase);
     setIsEditDialogOpen(true);
   };
 
-  const handleToggleActive = (purchase) => {
+  const handleToggleActive = (purchase: any) => {
     const action = purchase.isActive ? "deactivated" : "activated";
     toast({
       title: `Purchase Order ${action}`,
@@ -217,6 +217,29 @@ const Purchase = () => {
                       products.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
                           {product.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Supplier Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="supplier">Supplier</Label>
+                <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
+                  <SelectTrigger data-testid="select-supplier">
+                    <SelectValue placeholder="Select a supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliersLoading ? (
+                      <SelectItem value="" disabled>Loading suppliers...</SelectItem>
+                    ) : suppliers.length === 0 ? (
+                      <SelectItem value="" disabled>No suppliers available</SelectItem>
+                    ) : (
+                      suppliers.map((supplier: any) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.name}
                         </SelectItem>
                       ))
                     )}
@@ -313,57 +336,14 @@ const Purchase = () => {
             <DialogHeader>
               <DialogTitle>Edit Purchase Order</DialogTitle>
             </DialogHeader>
-            {editingPurchase && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-supplier">Supplier</Label>
-                    <Select defaultValue={editingPurchase.supplier}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ABC Electronics">ABC Electronics</SelectItem>
-                        <SelectItem value="XYZ Components">XYZ Components</SelectItem>
-                        <SelectItem value="Tech Supplies Co">Tech Supplies Co</SelectItem>
-                        <SelectItem value="Global Parts Ltd">Global Parts Ltd</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-status">Status</Label>
-                    <Select defaultValue={editingPurchase.status}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="partial">Partial</SelectItem>
-                        <SelectItem value="received">Received</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-notes">Notes</Label>
-                  <Textarea 
-                    id="edit-notes"
-                    defaultValue={editingPurchase.notes}
-                    placeholder="Add notes for this purchase order"
-                    rows={3}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleUpdatePurchase}>
-                    Update Order
-                  </Button>
-                </div>
+            <div className="space-y-4">
+              <p>Edit functionality will be implemented soon.</p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Close
+                </Button>
               </div>
-            )}
+            </div>
           </DialogContent>
         </Dialog>
       </div>

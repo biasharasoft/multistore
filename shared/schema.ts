@@ -348,6 +348,7 @@ export const purchases = pgTable("purchases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
   quantity: integer("quantity").notNull(),
   totalCost: integer("total_cost").notNull(), // Store as cents
   sellingPrice: integer("selling_price").notNull(), // Store as cents
@@ -360,6 +361,7 @@ export const purchases = pgTable("purchases", {
 // Purchases validation schemas
 export const insertPurchaseSchema = createInsertSchema(purchases).pick({
   productId: true,
+  supplierId: true,
   quantity: true,
   totalCost: true,
   sellingPrice: true,
@@ -367,6 +369,7 @@ export const insertPurchaseSchema = createInsertSchema(purchases).pick({
   notes: true,
 }).extend({
   productId: z.string().min(1, "Product is required"),
+  supplierId: z.string().min(1, "Supplier is required"),
   quantity: z.number().min(1, "Quantity must be at least 1"),
   totalCost: z.number().min(0, "Total cost must be non-negative"),
   sellingPrice: z.number().min(0, "Selling price must be non-negative"),
