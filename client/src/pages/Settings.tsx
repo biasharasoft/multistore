@@ -15,7 +15,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import { type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Company, type InsertCompany } from "@shared/schema";
+import type { UploadResult } from "@uppy/core";
 import { 
   Settings as SettingsIcon,
   User,
@@ -105,6 +107,7 @@ export default function Settings() {
   const [lastName, setLastName] = useState(userAuth?.user?.lastName || "");
   const [email, setEmail] = useState(userAuth?.user?.email || "");
   const [phone, setPhone] = useState(userAuth?.user?.phone || "");
+  const [profileImageUrl, setProfileImageUrl] = useState("");
 
   // Debug log for user data and phone field
   useEffect(() => {
@@ -154,6 +157,59 @@ export default function Settings() {
       setLanguage(appearanceData.language || "en");
     }
   }, [appearanceData]);
+
+  // Profile image upload handlers
+  const handleGetUploadParameters = async () => {
+    try {
+      const response = await apiRequest('/api/objects/upload', {
+        method: 'POST',
+      });
+      return {
+        method: 'PUT' as const,
+        url: response.uploadURL,
+      };
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to get upload URL",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful && result.successful.length > 0) {
+      const uploadedFile = result.successful[0];
+      const uploadURL = uploadedFile.uploadURL;
+      
+      try {
+        // Update user profile with the uploaded image
+        await apiRequest('/api/users/profile', {
+          method: 'PUT',
+          body: JSON.stringify({
+            profileImageURL: uploadURL
+          }),
+        });
+        
+        setProfileImageUrl(uploadURL);
+        
+        // Invalidate user auth query to refresh profile data
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+        
+        toast({
+          title: "Success",
+          description: "Profile image updated successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update profile image",
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
 
   // Create products category mutation
@@ -602,10 +658,16 @@ export default function Settings() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-2">
-                    <Button variant="outline" size="sm">
+                    <ObjectUploader
+                      maxNumberOfFiles={1}
+                      maxFileSize={5242880} // 5MB
+                      onGetUploadParameters={handleGetUploadParameters}
+                      onComplete={handleUploadComplete}
+                      buttonClassName="h-9"
+                    >
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Photo
-                    </Button>
+                    </ObjectUploader>
                     <Button variant="outline" size="sm">
                       <Trash2 className="h-4 w-4 mr-2" />
                       Remove

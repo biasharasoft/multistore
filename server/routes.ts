@@ -3,6 +3,10 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authService } from "./services/authService";
 import { authenticateToken, optionalAuth } from "./middleware/auth";
+import {
+  ObjectStorageService,
+  ObjectNotFoundError,
+} from "./objectStorage";
 import { 
   loginSchema, 
   registerSchema, 
@@ -1060,6 +1064,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error saving appearance settings:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to save appearance settings' 
+      });
+    }
+  });
+
+  // Object Storage Routes
+  
+  // Get upload URL for profile image
+  app.post('/api/objects/upload', authenticateToken, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error('Error getting upload URL:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to get upload URL' 
+      });
+    }
+  });
+
+  // Serve private objects (profile images)
+  app.get('/objects/:objectPath(*)', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      
+      const canAccess = await objectStorageService.canAccessObjectEntity({
+        objectFile,
+        userId: userId,
+        requestedPermission: "read" as any,
+      });
+      
+      if (!canAccess) {
+        return res.sendStatus(401);
+      }
+      
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error('Error accessing object:', error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
+  // Update user profile (including profile image)
+  app.put('/api/users/profile', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { firstName, lastName, phone, profileImageURL } = req.body;
+      
+      let profileImagePath = null;
+      
+      // If a profile image URL is provided, process it through object storage
+      if (profileImageURL) {
+        try {
+          const objectStorageService = new ObjectStorageService();
+          profileImagePath = await objectStorageService.trySetObjectEntityAclPolicy(
+            profileImageURL,
+            {
+              owner: userId,
+              visibility: "public", // Profile images are public
+            }
+          );
+        } catch (error) {
+          console.error('Error processing profile image:', error);
+          return res.status(400).json({ 
+            message: 'Failed to process profile image' 
+          });
+        }
+      }
+
+      const updateData: any = {};
+      if (firstName !== undefined) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (phone !== undefined) updateData.phone = phone;
+      if (profileImagePath) updateData.profileImage = profileImagePath;
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update profile' 
       });
     }
   });

@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   phone: varchar("phone"), // Optional phone number field
+  profileImage: varchar("profile_image"), // Optional profile image path
   password: text("password").notNull(),
   isEmailVerified: boolean("is_email_verified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
@@ -50,6 +51,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   firstName: true,
   lastName: true,
   phone: true,
+  profileImage: true,
   password: true,
 });
 
