@@ -16,6 +16,16 @@ import {
   Receipt
 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+type Store = {
+  id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  phone?: string;
+  email?: string;
+};
 
 interface SidebarProps {
   className?: string;
@@ -23,6 +33,13 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<string>("");
+
+  // Fetch user's stores
+  const { data: stores = [], isLoading: storesLoading } = useQuery<Store[]>({
+    queryKey: ['/api/stores'],
+    enabled: !isCollapsed, // Only fetch when sidebar is expanded
+  });
 
   const navigationItems = [
     {
@@ -156,10 +173,20 @@ export function Sidebar({ className }: SidebarProps) {
               <span className="text-sm font-medium text-sidebar-foreground">Current Store</span>
               <Store className="h-4 w-4 text-sidebar-foreground/60" />
             </div>
-            <select className="w-full bg-transparent text-sm text-sidebar-foreground border-none outline-none">
-              <option>Downtown Branch</option>
-              <option>Mall Location</option>
-              <option>Airport Store</option>
+            <select 
+              className="w-full bg-transparent text-sm text-sidebar-foreground border-none outline-none"
+              value={selectedStore}
+              onChange={(e) => setSelectedStore(e.target.value)}
+              data-testid="select-current-store"
+            >
+              <option value="">
+                {storesLoading ? "Loading stores..." : stores.length === 0 ? "No stores available" : "Select a store"}
+              </option>
+              {stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
