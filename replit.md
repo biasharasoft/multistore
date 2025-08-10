@@ -51,6 +51,12 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
 - All components and pages preserved from original project
 
 ## Recent Changes
+- **2025-08-10**: Added phone number field to users table
+  - Added optional phone column to users database schema (nullable field)
+  - Updated insertUserSchema to include phone field validation
+  - Applied database migration to add phone column to existing users table
+  - Phone field is already integrated in Settings page user profile section
+  - Phone number can be stored and retrieved with user authentication data
 - **2025-08-10**: Updated Settings page with dynamic user data loading
   - Removed timezone field from user profile settings as requested
   - Connected user information fields to load from authenticated user session data

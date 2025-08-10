@@ -16,6 +16,7 @@ export const users = pgTable("users", {
   email: varchar("email").notNull().unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  phone: varchar("phone"), // Optional phone number field
   password: text("password").notNull(),
   isEmailVerified: boolean("is_email_verified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
@@ -48,6 +49,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   firstName: true,
   lastName: true,
+  phone: true,
   password: true,
 });
 
