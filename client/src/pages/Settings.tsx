@@ -66,6 +66,16 @@ export default function Settings() {
     enabled: categoryType === "expenses",
   });
 
+  // Fetch current user data
+  const { data: userAuth } = useQuery<{ user: { id: string; email: string; firstName?: string; lastName?: string; phone?: string } }>({
+    queryKey: ['/api/auth/me'],
+  });
+
+  // Fetch user's stores from database
+  const { data: stores = [] } = useQuery<any[]>({
+    queryKey: ['/api/stores'],
+  });
+
 
   // Create products category mutation
   const createProductsCategoryMutation = useMutation({
@@ -198,11 +208,7 @@ export default function Settings() {
   // Get current categories based on selected type
   const currentCategories = categoryType === "products" ? mappedProductCategories : mappedExpenseCategories;
 
-  const stores = [
-    { id: 1, name: "Downtown Branch", address: "123 Main St, Downtown", status: "active" },
-    { id: 2, name: "Mall Location", address: "456 Shopping Center", status: "active" },
-    { id: 3, name: "Airport Store", address: "789 Airport Terminal", status: "inactive" },
-  ];
+
 
   const [teamMembers, setTeamMembers] = useState([
     { id: 1, name: "John Doe", email: "john@company.com", role: "Admin", status: "active", store: "Downtown Branch" },
@@ -372,7 +378,9 @@ export default function Settings() {
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-20 w-20">
                     <AvatarImage src="/placeholder-avatar.jpg" />
-                    <AvatarFallback>JD</AvatarFallback>
+                    <AvatarFallback>
+                      {userAuth?.user?.firstName?.charAt(0) || ""}{userAuth?.user?.lastName?.charAt(0) || ""}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="space-y-2">
                     <Button variant="outline" size="sm">
@@ -390,25 +398,23 @@ export default function Settings() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" defaultValue="John" />
+                      <Input id="firstName" defaultValue={userAuth?.user?.firstName || ""} data-testid="input-first-name" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" defaultValue="Doe" />
+                      <Input id="lastName" defaultValue={userAuth?.user?.lastName || ""} data-testid="input-last-name" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" defaultValue="john@company.com" />
+                    <Input id="email" type="email" defaultValue={userAuth?.user?.email || ""} data-testid="input-email" />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" defaultValue="+1 (555) 123-4567" />
+                    <Input id="phone" defaultValue={userAuth?.user?.phone || ""} data-testid="input-phone" />
                   </div>
-
-                  
                 </div>
               </CardContent>
             </Card>

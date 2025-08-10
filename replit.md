@@ -51,6 +51,14 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
 - All components and pages preserved from original project
 
 ## Recent Changes
+- **2025-08-10**: Updated Settings page with dynamic user data loading
+  - Removed timezone field from user profile settings as requested
+  - Connected user information fields to load from authenticated user session data
+  - Added proper data fetching for user authentication data via /api/auth/me endpoint
+  - Updated firstName, lastName, email, and phone fields to display real user data
+  - Modified avatar initials to dynamically show user's first and last name initials
+  - Connected stores data to load from database instead of using mock data
+  - Fixed TypeScript typing issues for user authentication and stores data
 - **2025-08-10**: Enhanced purchase management system with supplier integration
   - Added supplier dropdown to purchase recording form that loads from suppliers database
   - Updated purchases table schema to include optional supplier_id field with foreign key relationship
