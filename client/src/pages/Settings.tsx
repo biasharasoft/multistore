@@ -87,9 +87,18 @@ export default function Settings() {
   });
 
   // Fetch industries data
-  const { data: industries = [] } = useQuery<any[]>({
+  const { data: industries = [], isLoading: isLoadingIndustries, error: industriesError } = useQuery<any[]>({
     queryKey: ['/api/industries-categories'],
   });
+
+  // Debug log for industries data
+  useEffect(() => {
+    console.log('Industries data:', industries);
+    console.log('Industries loading:', isLoadingIndustries);
+    if (industriesError) {
+      console.error('Industries error:', industriesError);
+    }
+  }, [industries, isLoadingIndustries, industriesError]);
 
   // Profile form states
   const [firstName, setFirstName] = useState(userAuth?.user?.firstName || "");
@@ -672,11 +681,15 @@ export default function Settings() {
                       <SelectValue placeholder="Select industry" />
                     </SelectTrigger>
                     <SelectContent>
-                      {industries.map((industryItem: any) => (
-                        <SelectItem key={industryItem.id} value={industryItem.name}>
-                          {industryItem.name}
-                        </SelectItem>
-                      ))}
+                      {industries && industries.length > 0 ? (
+                        industries.map((industryItem: any) => (
+                          <SelectItem key={industryItem.id} value={industryItem.name}>
+                            {industryItem.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>Loading industries...</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
