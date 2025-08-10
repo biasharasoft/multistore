@@ -15,7 +15,8 @@ import {
   insertExpensesCategorySchema,
   insertProductSchema,
   insertSupplierSchema,
-  insertCustomerSchema
+  insertCustomerSchema,
+  insertPurchaseSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -841,6 +842,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting customer:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to delete customer' 
+      });
+    }
+  });
+
+  // Purchase Routes
+  
+  // Get all purchases for authenticated user
+  app.get('/api/purchases', authenticateToken, async (req, res) => {
+    try {
+      const purchases = await storage.getPurchasesByUserId(req.user!.id);
+      res.json(purchases);
+    } catch (error) {
+      console.error('Error fetching purchases:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch purchases' 
+      });
+    }
+  });
+
+  // Get a specific purchase by ID
+  app.get('/api/purchases/:id', authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const purchase = await storage.getPurchaseById(id);
+      
+      if (!purchase) {
+        return res.status(404).json({ message: 'Purchase not found' });
+      }
+      
+      res.json(purchase);
+    } catch (error) {
+      console.error('Error fetching purchase:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch purchase' 
+      });
+    }
+  });
+
+  // Create a new purchase
+  app.post('/api/purchases', authenticateToken, async (req, res) => {
+    try {
+      const purchaseData = insertPurchaseSchema.parse(req.body);
+      
+      // Convert purchaseDate string to Date
+      const purchaseWithDate = {
+        ...purchaseData,
+        purchaseDate: new Date(purchaseData.purchaseDate),
+        userId: req.user!.id
+      };
+      
+      const newPurchase = await storage.createPurchase(purchaseWithDate);
+      
+      res.status(201).json(newPurchase);
+    } catch (error) {
+      console.error('Error creating purchase:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to create purchase' 
+      });
+    }
+  });
+
+  // Update an existing purchase
+  app.put('/api/purchases/:id', authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertPurchaseSchema.partial().parse(req.body);
+      
+      // Convert purchaseDate string to Date if provided
+      if (updates.purchaseDate) {
+        (updates as any).purchaseDate = new Date(updates.purchaseDate);
+      }
+      
+      const updatedPurchase = await storage.updatePurchase(id, req.user!.id, updates);
+      res.json(updatedPurchase);
+    } catch (error) {
+      console.error('Error updating purchase:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update purchase' 
+      });
+    }
+  });
+
+  // Delete a purchase
+  app.delete('/api/purchases/:id', authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePurchase(id, req.user!.id);
+      res.json({ message: 'Purchase deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting purchase:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to delete purchase' 
       });
     }
   });

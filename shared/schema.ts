@@ -342,3 +342,37 @@ export const insertCustomerSchema = z.object({
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
+
+// Purchases table
+export const purchases = pgTable("purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  quantity: integer("quantity").notNull(),
+  totalCost: integer("total_cost").notNull(), // Store as cents
+  sellingPrice: integer("selling_price").notNull(), // Store as cents
+  purchaseDate: timestamp("purchase_date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Purchases validation schemas
+export const insertPurchaseSchema = createInsertSchema(purchases).pick({
+  productId: true,
+  quantity: true,
+  totalCost: true,
+  sellingPrice: true,
+  purchaseDate: true,
+  notes: true,
+}).extend({
+  productId: z.string().min(1, "Product is required"),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  totalCost: z.number().min(0, "Total cost must be non-negative"),
+  sellingPrice: z.number().min(0, "Selling price must be non-negative"),
+  purchaseDate: z.string().min(1, "Purchase date is required"),
+  notes: z.string().optional(),
+});
+
+export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
+export type Purchase = typeof purchases.$inferSelect;

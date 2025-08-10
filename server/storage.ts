@@ -1,4 +1,4 @@
-import { users, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer } from "@shared/schema";
+import { users, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, type User, type InsertUser, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -61,11 +61,17 @@ export interface IStorage {
   getAllCustomers(): Promise<Customer[]>;
   getActiveCustomers(): Promise<Customer[]>;
   getCustomerById(id: string): Promise<Customer | undefined>;
-
   getCustomersByStatus(status: string): Promise<Customer[]>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer>;
   deleteCustomer(id: string): Promise<void>;
+  
+  // Purchases operations
+  getPurchasesByUserId(userId: string): Promise<Purchase[]>;
+  getPurchaseById(id: string): Promise<Purchase | undefined>;
+  createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase>;
+  updatePurchase(id: string, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase>;
+  deletePurchase(id: string, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -528,6 +534,60 @@ export class DatabaseStorage implements IStorage {
     
     if (result.length === 0) {
       throw new Error("Customer not found");
+    }
+  }
+
+  // Purchases operations
+  async getPurchasesByUserId(userId: string): Promise<Purchase[]> {
+    const userPurchases = await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.userId, userId))
+      .orderBy(sql`${purchases.createdAt} DESC`);
+    return userPurchases;
+  }
+
+  async getPurchaseById(id: string): Promise<Purchase | undefined> {
+    const [purchase] = await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.id, id));
+    return purchase || undefined;
+  }
+
+  async createPurchase(purchaseData: InsertPurchase & { userId: string }): Promise<Purchase> {
+    const [purchase] = await db
+      .insert(purchases)
+      .values(purchaseData)
+      .returning();
+    return purchase;
+  }
+
+  async updatePurchase(id: string, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase> {
+    const [purchase] = await db
+      .update(purchases)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(purchases.id, id), eq(purchases.userId, userId)))
+      .returning();
+    
+    if (!purchase) {
+      throw new Error("Purchase not found");
+    }
+    
+    return purchase;
+  }
+
+  async deletePurchase(id: string, userId: string): Promise<void> {
+    const result = await db
+      .delete(purchases)
+      .where(and(eq(purchases.id, id), eq(purchases.userId, userId)))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Purchase not found");
     }
   }
 }

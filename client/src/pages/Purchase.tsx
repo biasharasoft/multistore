@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 type Product = {
   id: string;
@@ -34,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Purchase = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -98,6 +100,45 @@ const Purchase = () => {
     queryKey: ['/api/products'],
   });
 
+  // Create purchase mutation
+  const createPurchaseMutation = useMutation({
+    mutationFn: async (purchaseData: {
+      productId: string;
+      quantity: number;
+      totalCost: number;
+      sellingPrice: number;
+      purchaseDate: string;
+      notes?: string;
+    }) => {
+      return apiRequest('/api/purchases', {
+        method: 'POST',
+        body: purchaseData,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/purchases'] });
+      toast({
+        title: "Purchase Recorded",
+        description: "New purchase has been recorded successfully."
+      });
+      setIsAddDialogOpen(false);
+      // Reset form
+      setSelectedProduct("");
+      setQuantity(1);
+      setTotalCost(0);
+      setSellingPrice(0);
+      setPurchaseDate(new Date().toISOString().split('T')[0]);
+      setNotes("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to record purchase",
+        variant: "destructive"
+      });
+    }
+  });
+
   const suppliers = [
     { id: "sup1", name: "ABC Electronics" },
     { id: "sup2", name: "XYZ Components" },
@@ -143,18 +184,17 @@ const Purchase = () => {
       return;
     }
     
-    toast({
-      title: "Purchase Recorded",
-      description: "New purchase has been recorded successfully."
-    });
-    setIsAddDialogOpen(false);
-    // Reset form
-    setSelectedProduct("");
-    setQuantity(1);
-    setTotalCost(0);
-    setSellingPrice(0);
-    setPurchaseDate(new Date().toISOString().split('T')[0]);
-    setNotes("");
+    // Convert prices to cents for storage
+    const purchaseData = {
+      productId: selectedProduct,
+      quantity,
+      totalCost: Math.round(totalCost * 100), // Convert to cents
+      sellingPrice: Math.round(sellingPrice * 100), // Convert to cents
+      purchaseDate,
+      notes: notes || undefined
+    };
+    
+    createPurchaseMutation.mutate(purchaseData);
   };
 
   const handleEditPurchase = (purchase) => {
@@ -295,8 +335,12 @@ const Purchase = () => {
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} data-testid="button-cancel">
                   Cancel
                 </Button>
-                <Button onClick={handleAddPurchase} data-testid="button-record-purchase">
-                  Record Purchase
+                <Button 
+                  onClick={handleAddPurchase} 
+                  disabled={createPurchaseMutation.isPending}
+                  data-testid="button-record-purchase"
+                >
+                  {createPurchaseMutation.isPending ? "Recording..." : "Record Purchase"}
                 </Button>
               </div>
             </div>
