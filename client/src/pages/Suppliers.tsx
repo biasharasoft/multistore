@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Supplier, InsertSupplier } from "@shared/schema";
+import type { Supplier, InsertSupplier, ExpensesCategory } from "@shared/schema";
 import { 
   Search, 
   Plus, 
@@ -33,7 +33,7 @@ import {
   Users
 } from "lucide-react";
 
-const categories = ["All", "Food & Beverages", "Electronics", "Sports & Fitness", "Apparel", "Office Supplies"];
+// Dynamic categories will be built from database data
 
 // Helper function to convert database supplier data for display
 const convertDbSupplierToFrontend = (dbSupplier: Supplier) => {
@@ -52,7 +52,7 @@ const convertDbSupplierToFrontend = (dbSupplier: Supplier) => {
     description: dbSupplier.description || "",
     website: dbSupplier.website || "",
     rating: dbSupplier.rating ? dbSupplier.rating / 10 : 0, // Convert back from storage format
-    totalSpent: dbSupplier.totalSpent ? dbSupplier.totalSpent / 100 : 0, // Convert back from cents
+    totalSpent: (dbSupplier.totalSpent || 0) / 100, // Convert back from cents
     totalOrders: dbSupplier.totalOrders || 0,
     leadTime: dbSupplier.leadTime || 0,
     lastOrderDate: dbSupplier.lastOrderDate ? new Date(dbSupplier.lastOrderDate).toISOString().split('T')[0] : "",
@@ -67,9 +67,17 @@ export default function Suppliers() {
   const { data: dbSuppliers = [], isLoading } = useQuery<Supplier[]>({
     queryKey: ['/api/suppliers'],
   });
+
+  const { data: expenseCategories = [] } = useQuery<ExpensesCategory[]>({
+    queryKey: ['/api/expenses-categories'],
+  });
   
   // Convert database data for display
   const suppliers = dbSuppliers.map(convertDbSupplierToFrontend);
+  
+  // Build categories array from database data
+  const categories = ["All", ...expenseCategories.map(cat => cat.name)];
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
@@ -405,11 +413,11 @@ export default function Suppliers() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Food & Beverages">Food & Beverages</SelectItem>
-                    <SelectItem value="Electronics">Electronics</SelectItem>
-                    <SelectItem value="Sports & Fitness">Sports & Fitness</SelectItem>
-                    <SelectItem value="Apparel">Apparel</SelectItem>
-                    <SelectItem value="Office Supplies">Office Supplies</SelectItem>
+                    {expenseCategories.map(category => (
+                      <SelectItem key={category.id} value={category.name}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
