@@ -756,20 +756,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get customers by category
-  app.get('/api/customers/category/:category', async (req, res) => {
-    try {
-      const { category } = req.params;
-      const categoryCustomers = await storage.getCustomersByCategory(category);
-      res.json(categoryCustomers);
-    } catch (error) {
-      console.error('Error fetching customers by category:', error);
-      res.status(500).json({ 
-        message: error instanceof Error ? error.message : 'Failed to fetch customers by category' 
-      });
-    }
-  });
-
   // Get customers by status
   app.get('/api/customers/status/:status', async (req, res) => {
     try {

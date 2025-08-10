@@ -61,7 +61,7 @@ export interface IStorage {
   getAllCustomers(): Promise<Customer[]>;
   getActiveCustomers(): Promise<Customer[]>;
   getCustomerById(id: string): Promise<Customer | undefined>;
-  getCustomersByCategory(category: string): Promise<Customer[]>;
+
   getCustomersByStatus(status: string): Promise<Customer[]>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer>;
@@ -484,14 +484,7 @@ export class DatabaseStorage implements IStorage {
     return customer || undefined;
   }
 
-  async getCustomersByCategory(category: string): Promise<Customer[]> {
-    const categoryCustomers = await db
-      .select()
-      .from(customers)
-      .where(eq(customers.category, category))
-      .orderBy(customers.name);
-    return categoryCustomers;
-  }
+
 
   async getCustomersByStatus(status: string): Promise<Customer[]> {
     const statusCustomers = await db
