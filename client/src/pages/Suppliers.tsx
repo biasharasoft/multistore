@@ -100,7 +100,6 @@ export default function Suppliers() {
     rating: "",
     totalOrders: "",
     totalSpent: "",
-    paymentTerms: "",
     leadTime: "",
     description: "",
     website: "",
@@ -137,7 +136,6 @@ export default function Suppliers() {
         rating: "",
         totalOrders: "",
         totalSpent: "",
-        paymentTerms: "",
         leadTime: "",
         description: "",
         website: "",
@@ -171,7 +169,6 @@ export default function Suppliers() {
         rating: supplierForm.rating ? parseInt(supplierForm.rating) : undefined,
         totalOrders: supplierForm.totalOrders ? parseInt(supplierForm.totalOrders) : undefined,
         totalSpent: supplierForm.totalSpent ? parseInt(supplierForm.totalSpent) : undefined,
-        paymentTerms: supplierForm.paymentTerms || undefined,
         leadTime: supplierForm.leadTime ? parseInt(supplierForm.leadTime) : undefined,
         description: supplierForm.description || undefined,
         website: supplierForm.website || undefined,
@@ -447,21 +444,7 @@ export default function Suppliers() {
                   data-testid="input-country"
                 />
               </div>
-              <div>
-                <Label htmlFor="paymentTerms">Payment Terms</Label>
-                <Select value={supplierForm.paymentTerms} onValueChange={(value) => setSupplierForm({ ...supplierForm, paymentTerms: value })}>
-                  <SelectTrigger data-testid="select-payment-terms">
-                    <SelectValue placeholder="Select payment terms" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Net 15">Net 15</SelectItem>
-                    <SelectItem value="Net 30">Net 30</SelectItem>
-                    <SelectItem value="Net 45">Net 45</SelectItem>
-                    <SelectItem value="Net 60">Net 60</SelectItem>
-                    <SelectItem value="Cash on Delivery">Cash on Delivery</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              
               <div>
                 <Label htmlFor="leadTime">Lead Time (Days)</Label>
                 <Input 
