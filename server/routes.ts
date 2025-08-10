@@ -807,6 +807,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/customers', async (req, res) => {
     try {
       const customerData = insertCustomerSchema.parse(req.body);
+      
+      // Convert dateOfBirth string to Date if provided
+      if (customerData.dateOfBirth) {
+        (customerData as any).dateOfBirth = new Date(customerData.dateOfBirth);
+      }
+      
       const newCustomer = await storage.createCustomer(customerData);
       
       res.status(201).json(newCustomer);
@@ -823,6 +829,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updates = insertCustomerSchema.partial().parse(req.body);
+      
+      // Convert dateOfBirth string to Date if provided
+      if (updates.dateOfBirth) {
+        (updates as any).dateOfBirth = new Date(updates.dateOfBirth);
+      }
       
       const updatedCustomer = await storage.updateCustomer(id, updates);
       res.json(updatedCustomer);

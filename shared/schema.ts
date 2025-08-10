@@ -312,17 +312,15 @@ export const customers = pgTable("customers", {
   name: varchar("name").notNull(),
   email: varchar("email"),
   phone: varchar("phone"),
-  address: text("address"),
   city: varchar("city"),
-  country: varchar("country"),
   status: varchar("status").notNull().default("active"), // active, inactive, vip
-  category: varchar("category").notNull().default("retail"), // retail, wholesale, corporate
+  gender: varchar("gender"), // male, female
+  dateOfBirth: timestamp("date_of_birth"),
   idType: varchar("id_type"), // nida, driverLicense, passport, voterID
   idNumber: varchar("id_number"),
   totalOrders: integer("total_orders").default(0),
   totalSpent: integer("total_spent").default(0), // Store as cents
   loyaltyPoints: integer("loyalty_points").default(0),
-  notes: text("notes"),
   lastOrderDate: timestamp("last_order_date"),
   dateJoined: timestamp("date_joined").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -330,25 +328,16 @@ export const customers = pgTable("customers", {
 });
 
 // Customers validation schemas
-export const insertCustomerSchema = createInsertSchema(customers).pick({
-  name: true,
-  email: true,
-  phone: true,
-  address: true,
-  city: true,
-  country: true,
-  status: true,
-  category: true,
-  idType: true,
-  idNumber: true,
-  notes: true,
-}).extend({
+export const insertCustomerSchema = z.object({
   name: z.string().min(1, "Customer name is required"),
   email: z.string().email("Valid email is required").optional().or(z.literal("")),
   phone: z.string().optional(),
+  city: z.string().optional(),
   status: z.enum(["active", "inactive", "vip"]).optional(),
-  category: z.enum(["retail", "wholesale", "corporate"]).optional(),
+  gender: z.enum(["male", "female"]).optional(),
+  dateOfBirth: z.string().optional(),
   idType: z.enum(["nida", "driverLicense", "passport", "voterID"]).optional(),
+  idNumber: z.string().optional(),
 });
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;

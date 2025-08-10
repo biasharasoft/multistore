@@ -51,6 +51,14 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
 - All components and pages preserved from original project
 
 ## Recent Changes
+- **2025-08-10**: Completed customer management system restructuring
+  - Removed Country, Category, Notes, and Address fields from customer form and database
+  - Added Gender field with Male/Female dropdown options and Date of Birth field
+  - Updated database schema by dropping old columns and adding new gender and date_of_birth columns
+  - Modified customer table display to show Gender and Date of Birth instead of removed fields
+  - Removed category filtering functionality since Category field was eliminated
+  - Fixed date validation issue by handling dateOfBirth conversion from string to Date in backend routes
+  - Successfully tested customer creation and retrieval with new field structure
 - **2025-08-10**: Completed supplier management system integration
   - Connected category dropdown to load from expenses_categories database table
   - Implemented complete supplier registration with database persistence

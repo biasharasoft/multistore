@@ -11,7 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   Users, 
@@ -26,7 +29,6 @@ import {
   Phone, 
   Mail, 
   MapPin,
-  Calendar,
   DollarSign,
   ShoppingCart,
   Star,
@@ -47,7 +49,7 @@ const Customers = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
@@ -130,9 +132,8 @@ const Customers = () => {
                          customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          customer.phone?.includes(searchTerm);
     const matchesStatus = statusFilter === "all" || customer.status === statusFilter;
-    const matchesCategory = categoryFilter === "all" || customer.category === categoryFilter;
     
-    return matchesSearch && matchesStatus && matchesCategory;
+    return matchesSearch && matchesStatus;
   });
 
   const handleAddCustomer = (data: InsertCustomer) => {
@@ -162,14 +163,7 @@ const Customers = () => {
     return <Badge variant="secondary" className={styles[status as keyof typeof styles]}>{status.toUpperCase()}</Badge>;
   };
 
-  const getCategoryBadge = (category: string) => {
-    const styles = {
-      retail: "bg-blue-100 text-blue-800 hover:bg-blue-200",
-      wholesale: "bg-orange-100 text-orange-800 hover:bg-orange-200",
-      corporate: "bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
-    };
-    return <Badge variant="outline" className={styles[category as keyof typeof styles]}>{category}</Badge>;
-  };
+
 
   const CustomerForm = ({ customer, onSubmit, isSubmitting = false }: { customer?: Customer; onSubmit: (data: InsertCustomer) => void; isSubmitting?: boolean }) => {
     const form = useForm<InsertCustomer>({
@@ -178,14 +172,12 @@ const Customers = () => {
         name: customer?.name || "",
         email: customer?.email || "",
         phone: customer?.phone || "",
-        address: customer?.address || "",
         city: customer?.city || "",
-        country: customer?.country || "",
         status: customer?.status || "active",
-        category: customer?.category || "retail",
+        gender: customer?.gender || "male",
+        dateOfBirth: customer?.dateOfBirth ? new Date(customer.dateOfBirth) : undefined,
         idType: customer?.idType || "nida",
         idNumber: customer?.idNumber || "",
-        notes: customer?.notes || "",
       },
     });
 
@@ -246,23 +238,7 @@ const Customers = () => {
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Address</FormLabel>
-                  <div className="col-span-3">
-                    <FormControl>
-                      <Input {...field} data-testid="input-address" />
-                    </FormControl>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-          </div>
+
 
           <div className="grid grid-cols-4 items-center gap-4">
             <FormField
@@ -285,14 +261,22 @@ const Customers = () => {
           <div className="grid grid-cols-4 items-center gap-4">
             <FormField
               control={form.control}
-              name="country"
+              name="gender"
               render={({ field }) => (
                 <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Country</FormLabel>
+                  <FormLabel className="text-right">Gender</FormLabel>
                   <div className="col-span-3">
-                    <FormControl>
-                      <Input {...field} data-testid="input-country" />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} data-testid="select-gender">
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </div>
                 </FormItem>
@@ -330,23 +314,40 @@ const Customers = () => {
           <div className="grid grid-cols-4 items-center gap-4">
             <FormField
               control={form.control}
-              name="category"
+              name="dateOfBirth"
               render={({ field }) => (
                 <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Category</FormLabel>
+                  <FormLabel className="text-right">Date of Birth</FormLabel>
                   <div className="col-span-3">
-                    <Select onValueChange={field.onChange} defaultValue={field.value} data-testid="select-category">
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="retail">Retail</SelectItem>
-                        <SelectItem value="wholesale">Wholesale</SelectItem>
-                        <SelectItem value="corporate">Corporate</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                            data-testid="date-picker-trigger"
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </div>
                 </FormItem>
@@ -400,23 +401,7 @@ const Customers = () => {
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem className="col-span-4 grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Notes</FormLabel>
-                  <div className="col-span-3">
-                    <FormControl>
-                      <Textarea {...field} placeholder="Additional notes" data-testid="input-notes" />
-                    </FormControl>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-          </div>
+
           
           <div className="flex justify-end space-x-2 pt-4">
             <Button 
@@ -563,17 +548,7 @@ const Customers = () => {
                       <SelectItem value="vip">VIP</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="retail">Retail</SelectItem>
-                      <SelectItem value="wholesale">Wholesale</SelectItem>
-                      <SelectItem value="corporate">Corporate</SelectItem>
-                    </SelectContent>
-                  </Select>
+
                   <div className="flex items-center space-x-1 border rounded-md">
                     <Button
                       variant={viewMode === "list" ? "default" : "ghost"}
@@ -601,9 +576,9 @@ const Customers = () => {
                       <TableRow>
                         <TableHead>Customer</TableHead>
                         <TableHead>Contact</TableHead>
-                        <TableHead>Location</TableHead>
+                        <TableHead>Gender</TableHead>
+                        <TableHead>Date of Birth</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Category</TableHead>
                         <TableHead className="text-right">Orders</TableHead>
                         <TableHead className="text-right">Total Spent</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -631,13 +606,19 @@ const Customers = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center text-sm">
-                              <MapPin className="mr-1 h-3 w-3" />
-                              {customer.city}, {customer.country}
+                            <div className="text-sm capitalize">
+                              {customer.gender || "Not specified"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {customer.dateOfBirth 
+                                ? new Date(customer.dateOfBirth).toLocaleDateString()
+                                : "Not specified"
+                              }
                             </div>
                           </TableCell>
                           <TableCell>{getStatusBadge(customer.status)}</TableCell>
-                          <TableCell>{getCategoryBadge(customer.category)}</TableCell>
                           <TableCell className="text-right">{customer.totalOrders}</TableCell>
                           <TableCell className="text-right">TSh {customer.totalSpent.toLocaleString()}</TableCell>
                           <TableCell className="text-right">
