@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { formatCurrency } from "@/lib/currency";
 
 type Product = {
   id: string;
@@ -65,6 +66,11 @@ const Purchase = () => {
   // Fetch user's suppliers from database
   const { data: suppliers = [], isLoading: suppliersLoading } = useQuery<any[]>({
     queryKey: ['/api/suppliers'],
+  });
+
+  // Fetch company information to get currency setting
+  const { data: company } = useQuery<any>({
+    queryKey: ['/api/company'],
   });
 
   // Calculate current month statistics
@@ -396,7 +402,9 @@ const Purchase = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="total-value-amount">₱{(currentMonthStats.totalValue / 100).toLocaleString()}</div>
+            <div className="text-2xl font-bold" data-testid="total-value-amount">
+              {formatCurrency(currentMonthStats.totalValue, company?.currency || 'tzs')}
+            </div>
             <p className="text-xs text-muted-foreground">
               This month
             </p>
@@ -566,7 +574,7 @@ const Purchase = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>{purchase.quantity} items</TableCell>
-                      <TableCell>₱{(purchase.totalCost / 100).toLocaleString()}</TableCell>
+                      <TableCell>{formatCurrency(purchase.totalCost, company?.currency || 'tzs')}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="sm">

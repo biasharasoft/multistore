@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { type Product as DbProduct, type InsertProduct, type ProductsCategory } from "@shared/schema";
+import { formatCurrency } from "@/lib/currency";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,11 @@ export default function Products() {
   
   const { data: categories = [], isLoading: isLoadingCategories } = useQuery<ProductsCategory[]>({
     queryKey: ['/api/products-categories'],
+  });
+
+  // Fetch company information to get currency setting
+  const { data: company } = useQuery<any>({
+    queryKey: ['/api/company'],
   });
   
   // Convert database products to frontend format
@@ -364,7 +370,9 @@ export default function Products() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Price</p>
-              <p className="font-semibold text-primary">${product.price}</p>
+              <p className="font-semibold text-primary">
+                {formatCurrency(Math.round(product.price * 100), company?.currency || 'tzs')}
+              </p>
             </div>
             <div>
               <p className="text-muted-foreground">Stock</p>
@@ -372,7 +380,9 @@ export default function Products() {
             </div>
             <div>
               <p className="text-muted-foreground">Cost</p>
-              <p className="font-semibold">${product.cost}</p>
+              <p className="font-semibold">
+                {formatCurrency(Math.round(product.cost * 100), company?.currency || 'tzs')}
+              </p>
             </div>
             <div>
               <p className="text-muted-foreground">Margin</p>
@@ -424,10 +434,10 @@ export default function Products() {
           <Badge variant="outline">{product.category}</Badge>
         </div>
         <div className="text-center font-semibold text-primary">
-          ${product.price}
+          {formatCurrency(Math.round(product.price * 100), company?.currency || 'tzs')}
         </div>
         <div className="text-center">
-          ${product.cost}
+          {formatCurrency(Math.round(product.cost * 100), company?.currency || 'tzs')}
         </div>
         <div className="text-center">
           <Badge variant={stockStatus.variant}>
@@ -687,7 +697,9 @@ export default function Products() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Inventory Value</p>
-                <p className="text-2xl font-bold">${totalValue.toLocaleString()}</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(Math.round(totalValue * 100), company?.currency || 'tzs')}
+                </p>
               </div>
               <DollarSign className="h-8 w-8 text-green-600" />
             </div>

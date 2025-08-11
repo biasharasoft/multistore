@@ -151,6 +151,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: 'Logged out successfully' });
   });
 
+  // Get user's company information (for currency and other settings)
+  app.get('/api/company', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const company = await storage.getCompanyByUserId(userId);
+      if (!company) {
+        return res.status(404).json({ message: 'Company not found' });
+      }
+      res.json(company);
+    } catch (error) {
+      console.error('Error fetching company:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // Store Routes
   
   // Get all stores for the authenticated user

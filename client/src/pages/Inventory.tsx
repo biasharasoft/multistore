@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Filter, Trash2, AlertTriangle, Package, TrendingUp, TrendingDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@/lib/currency";
 interface InventoryItem {
   id: string;
   name: string;
@@ -73,6 +75,11 @@ export default function Inventory() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  // Fetch company information to get currency setting
+  const { data: company } = useQuery<any>({
+    queryKey: ['/api/company'],
+  });
   const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [adjustmentItems, setAdjustmentItems] = useState<SelectedItem[]>([]);
@@ -386,7 +393,7 @@ export default function Inventory() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">TSh {totalValue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(Math.round(totalValue * 100), company?.currency || 'tzs')}</div>
             <p className="text-xs text-muted-foreground">
               +15% from last month
             </p>

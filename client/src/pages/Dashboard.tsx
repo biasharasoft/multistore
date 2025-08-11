@@ -2,6 +2,8 @@ import { MetricsCard } from "@/components/dashboard/MetricsCard";
 import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
 import { InventoryAlerts } from "@/components/dashboard/InventoryAlerts";
 import { TopProducts } from "@/components/dashboard/TopProducts";
+import { useQuery } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/currency";
 import { 
   DollarSign, 
   ShoppingBag, 
@@ -13,10 +15,15 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
+  // Fetch company information to get currency setting
+  const { data: company } = useQuery<any>({
+    queryKey: ['/api/company'],
+  });
+
   const metrics = [
     {
       title: "Total Revenue",
-      value: "TSh 45,231.89",
+      value: formatCurrency(4523189, company?.currency || 'tzs'), // 45,231.89 in cents
       change: "+20.1%",
       changeType: "positive" as const,
       icon: DollarSign

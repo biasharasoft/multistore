@@ -54,6 +54,7 @@ import { ExpenseFilters } from "@/components/expenses/ExpenseFilters";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@/lib/currency";
 
 interface Expense {
   id: string;
@@ -98,6 +99,11 @@ export default function Expenses() {
 
   const { data: stores = [] } = useQuery<any[]>({
     queryKey: ['/api/stores'],
+  });
+
+  // Fetch company information to get currency setting
+  const { data: company } = useQuery<any>({
+    queryKey: ['/api/company'],
   });
   
   const statuses = ['all', 'paid', 'pending', 'overdue'];
@@ -155,7 +161,8 @@ export default function Expenses() {
   };
 
   const formatAmount = (amountInCents: number) => {
-    return `$${(amountInCents / 100).toFixed(2)}`;
+    const currency = company?.currency || 'tzs';
+    return formatCurrency(amountInCents, currency);
   };
 
   const getCategoryName = (categoryId: string) => {

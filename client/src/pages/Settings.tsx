@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Company, type InsertCompany } from "@shared/schema";
 import type { UploadResult } from "@uppy/core";
+import { getSupportedCurrencies } from "@/lib/currency";
 import { 
   Settings as SettingsIcon,
   User,
@@ -818,11 +819,11 @@ export default function Settings() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="tzs">TZS (TSh)</SelectItem>
-                      <SelectItem value="usd">USD ($)</SelectItem>
-                      <SelectItem value="eur">EUR (€)</SelectItem>
-                      <SelectItem value="gbp">GBP (£)</SelectItem>
-                      <SelectItem value="cad">CAD (C$)</SelectItem>
+                      {getSupportedCurrencies().map((currencyOption) => (
+                        <SelectItem key={currencyOption.value} value={currencyOption.value}>
+                          {currencyOption.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
