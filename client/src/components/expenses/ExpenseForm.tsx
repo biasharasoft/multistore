@@ -20,16 +20,18 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 interface ExpenseFormData {
-  date: string;
+  expenseDate: string;
   description: string;
-  category: string;
+  categoryId: string;
   amount: number;
   vendor: string;
   status: 'paid' | 'pending' | 'overdue';
-  store: string;
+  storeId: string;
   receipt?: string;
+  notes?: string;
 }
 
 interface ExpenseFormProps {
@@ -39,46 +41,41 @@ interface ExpenseFormProps {
 export function ExpenseForm({ onSubmit }: ExpenseFormProps) {
   const [date, setDate] = useState<Date>(new Date());
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
   const [vendor, setVendor] = useState("");
   const [status, setStatus] = useState<'paid' | 'pending' | 'overdue'>('pending');
-  const [store, setStore] = useState("");
+  const [storeId, setStoreId] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
+  const [notes, setNotes] = useState("");
 
-  const categories = [
-    "Office Supplies",
-    "Rent",
-    "Utilities",
-    "Marketing",
-    "Maintenance",
-    "Travel",
-    "Software",
-    "Equipment"
-  ];
+  // Fetch active expense categories
+  const { data: categories = [] } = useQuery<any[]>({
+    queryKey: ['/api/expenses-categories/active'],
+  });
 
-  const stores = [
-    "Downtown Branch",
-    "Mall Location",
-    "Airport Store"
-  ];
+  // Fetch user stores
+  const { data: stores = [] } = useQuery<any[]>({
+    queryKey: ['/api/stores'],
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!description || !category || !amount || !vendor || !store) {
+    if (!description || !categoryId || !amount || !vendor || !storeId) {
       return;
     }
 
     const formData: ExpenseFormData = {
-      date: format(date, 'yyyy-MM-dd'),
+      expenseDate: format(date, 'yyyy-MM-dd'),
       description,
-      category,
-      amount: parseFloat(amount),
+      categoryId,
+      amount: Math.round(parseFloat(amount) * 100), // Convert to cents
       vendor,
       status,
-      store,
-      receipt: receipt?.name
+      storeId,
+      receipt: receipt?.name,
+      notes: notes.trim() || undefined
     };
 
     onSubmit(formData);
@@ -86,12 +83,13 @@ export function ExpenseForm({ onSubmit }: ExpenseFormProps) {
     // Reset form
     setDate(new Date());
     setDescription("");
-    setCategory("");
+    setCategoryId("");
     setAmount("");
     setVendor("");
     setStatus('pending');
-    setStore("");
+    setStoreId("");
     setReceipt(null);
+    setNotes("");
   };
 
   const handleReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,14 +161,14 @@ export function ExpenseForm({ onSubmit }: ExpenseFormProps) {
         {/* Category */}
         <div className="space-y-2">
           <Label>Category</Label>
-          <Select value={category} onValueChange={setCategory} required>
+          <Select value={categoryId} onValueChange={setCategoryId} required>
             <SelectTrigger>
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -194,14 +192,14 @@ export function ExpenseForm({ onSubmit }: ExpenseFormProps) {
         {/* Store */}
         <div className="space-y-2">
           <Label>Store</Label>
-          <Select value={store} onValueChange={setStore} required>
+          <Select value={storeId} onValueChange={setStoreId} required>
             <SelectTrigger>
               <SelectValue placeholder="Select store" />
             </SelectTrigger>
             <SelectContent>
-              {stores.map((storeName) => (
-                <SelectItem key={storeName} value={storeName}>
-                  {storeName}
+              {stores.map((store) => (
+                <SelectItem key={store.id} value={store.id}>
+                  {store.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -248,6 +246,17 @@ export function ExpenseForm({ onSubmit }: ExpenseFormProps) {
             </span>
           )}
         </div>
+      </div>
+
+      {/* Notes (Optional) */}
+      <div className="space-y-2">
+        <Label htmlFor="notes">Notes (Optional)</Label>
+        <Textarea
+          id="notes"
+          placeholder="Additional notes or comments..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
       </div>
 
       {/* Submit Button */}

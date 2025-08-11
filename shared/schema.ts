@@ -227,6 +227,49 @@ export const insertExpensesCategorySchema = createInsertSchema(expensesCategorie
 export type InsertExpensesCategory = z.infer<typeof insertExpensesCategorySchema>;
 export type ExpensesCategory = typeof expensesCategories.$inferSelect;
 
+// Expenses table
+export const expenses = pgTable("expenses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  storeId: varchar("store_id").references(() => stores.id, { onDelete: "set null" }),
+  categoryId: varchar("category_id").references(() => expensesCategories.id, { onDelete: "set null" }),
+  description: text("description").notNull(),
+  amount: integer("amount").notNull(), // Store as cents
+  vendor: varchar("vendor").notNull(),
+  status: varchar("status").notNull().default("pending"), // paid, pending, overdue
+  expenseDate: timestamp("expense_date").notNull(),
+  receipt: varchar("receipt"), // File path or URL to receipt
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Expenses validation schemas
+export const insertExpenseSchema = createInsertSchema(expenses).pick({
+  storeId: true,
+  categoryId: true,
+  description: true,
+  amount: true,
+  vendor: true,
+  status: true,
+  expenseDate: true,
+  receipt: true,
+  notes: true,
+}).extend({
+  storeId: z.string().optional(),
+  categoryId: z.string().optional(),
+  description: z.string().min(1, "Description is required"),
+  amount: z.number().min(0, "Amount must be non-negative"),
+  vendor: z.string().min(1, "Vendor is required"),
+  status: z.enum(["paid", "pending", "overdue"]).optional(),
+  expenseDate: z.string().min(1, "Expense date is required"),
+  receipt: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+export type Expense = typeof expenses.$inferSelect;
+
 // Products table
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -18,6 +18,7 @@ import {
   insertRegionSchema,
   insertProductsCategorySchema,
   insertExpensesCategorySchema,
+  insertExpenseSchema,
   insertProductSchema,
   insertSupplierSchema,
   insertCustomerSchema,
@@ -1003,6 +1004,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting purchase:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to delete purchase' 
+      });
+    }
+  });
+
+  // Expenses Routes
+
+  // Get all expenses for authenticated user
+  app.get('/api/expenses', authenticateToken, async (req, res) => {
+    try {
+      const expenses = await storage.getExpensesByUserId(req.user!.id);
+      res.json(expenses);
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch expenses' 
+      });
+    }
+  });
+
+  // Get a specific expense by ID
+  app.get('/api/expenses/:id', authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const expense = await storage.getExpenseById(id);
+      
+      if (!expense) {
+        return res.status(404).json({ message: 'Expense not found' });
+      }
+      
+      res.json(expense);
+    } catch (error) {
+      console.error('Error fetching expense:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch expense' 
+      });
+    }
+  });
+
+  // Get expenses by store
+  app.get('/api/expenses/store/:storeId', authenticateToken, async (req, res) => {
+    try {
+      const { storeId } = req.params;
+      const expenses = await storage.getExpensesByStoreId(storeId);
+      res.json(expenses);
+    } catch (error) {
+      console.error('Error fetching expenses by store:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch expenses by store' 
+      });
+    }
+  });
+
+  // Get expenses by category
+  app.get('/api/expenses/category/:categoryId', authenticateToken, async (req, res) => {
+    try {
+      const { categoryId } = req.params;
+      const expenses = await storage.getExpensesByCategory(categoryId);
+      res.json(expenses);
+    } catch (error) {
+      console.error('Error fetching expenses by category:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch expenses by category' 
+      });
+    }
+  });
+
+  // Get expenses by status
+  app.get('/api/expenses/status/:status', authenticateToken, async (req, res) => {
+    try {
+      const { status } = req.params;
+      const expenses = await storage.getExpensesByStatus(status);
+      res.json(expenses);
+    } catch (error) {
+      console.error('Error fetching expenses by status:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch expenses by status' 
+      });
+    }
+  });
+
+  // Create a new expense
+  app.post('/api/expenses', authenticateToken, async (req, res) => {
+    try {
+      const expenseData = insertExpenseSchema.parse(req.body);
+      
+      // Keep expenseDate as string for the createExpense method
+      const expenseWithUserId = {
+        ...expenseData,
+        userId: req.user!.id
+      };
+      
+      const newExpense = await storage.createExpense(expenseWithUserId);
+      
+      res.status(201).json(newExpense);
+    } catch (error) {
+      console.error('Error creating expense:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to create expense' 
+      });
+    }
+  });
+
+  // Update an existing expense
+  app.put('/api/expenses/:id', authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = insertExpenseSchema.partial().parse(req.body);
+      
+      // Convert expenseDate string to Date if provided
+      if (updates.expenseDate) {
+        (updates as any).expenseDate = new Date(updates.expenseDate);
+      }
+      
+      const updatedExpense = await storage.updateExpense(id, req.user!.id, updates);
+      res.json(updatedExpense);
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update expense' 
+      });
+    }
+  });
+
+  // Delete an expense
+  app.delete('/api/expenses/:id', authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteExpense(id, req.user!.id);
+      res.json({ message: 'Expense deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to delete expense' 
       });
     }
   });

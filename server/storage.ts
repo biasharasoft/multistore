@@ -1,4 +1,4 @@
-import { users, companies, stores, regions, productsCategories, expensesCategories, products, suppliers, customers, purchases, appearanceThemesSettings, industriesCategories, teamMembers, teamInvitations, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory, type TeamMember, type InsertTeamMember, type TeamInvitation, type InsertTeamInvitation } from "@shared/schema";
+import { users, companies, stores, regions, productsCategories, expensesCategories, expenses, products, suppliers, customers, purchases, appearanceThemesSettings, industriesCategories, teamMembers, teamInvitations, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Expense, type InsertExpense, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory, type TeamMember, type InsertTeamMember, type TeamInvitation, type InsertTeamInvitation } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -43,6 +43,17 @@ export interface IStorage {
   createExpensesCategory(category: InsertExpensesCategory): Promise<ExpensesCategory>;
   updateExpensesCategory(id: string, updates: Partial<InsertExpensesCategory>): Promise<ExpensesCategory>;
   deleteExpensesCategory(id: string): Promise<void>;
+
+  // Expenses operations
+  getAllExpenses(): Promise<Expense[]>;
+  getExpensesByUserId(userId: string): Promise<Expense[]>;
+  getExpenseById(id: string): Promise<Expense | undefined>;
+  getExpensesByStoreId(storeId: string): Promise<Expense[]>;
+  getExpensesByCategory(categoryId: string): Promise<Expense[]>;
+  getExpensesByStatus(status: string): Promise<Expense[]>;
+  createExpense(expense: InsertExpense & { userId: string }): Promise<Expense>;
+  updateExpense(id: string, userId: string, updates: Partial<InsertExpense>): Promise<Expense>;
+  deleteExpense(id: string, userId: string): Promise<void>;
   
   // Products operations
   getAllProducts(): Promise<Product[]>;
@@ -605,7 +616,7 @@ export class DatabaseStorage implements IStorage {
 
   async createCustomer(customerData: InsertCustomer): Promise<Customer> {
     // Convert dateOfBirth string to Date if present
-    const insertData = { ...customerData };
+    const insertData: any = { ...customerData };
     if (insertData.dateOfBirth && typeof insertData.dateOfBirth === 'string') {
       insertData.dateOfBirth = new Date(insertData.dateOfBirth);
     }
@@ -717,23 +728,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // User operations
-  async updateUser(id: string, updates: Partial<{ firstName: string; lastName: string; email: string; phone: string }>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, id))
-      .returning();
-    
-    if (!user) {
-      throw new Error("User not found");
-    }
-    
-    return user;
-  }
+
 
   // Appearance themes settings operations
   async getAppearanceSettingsByUserId(userId: string): Promise<AppearanceThemesSettings | undefined> {
@@ -961,6 +956,107 @@ export class DatabaseStorage implements IStorage {
     
     if (result.length === 0) {
       throw new Error("Team invitation not found");
+    }
+  }
+
+  // Expenses operations
+  async getAllExpenses(): Promise<Expense[]> {
+    const allExpenses = await db
+      .select()
+      .from(expenses)
+      .orderBy(sql`${expenses.createdAt} DESC`);
+    return allExpenses;
+  }
+
+  async getExpensesByUserId(userId: string): Promise<Expense[]> {
+    const userExpenses = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.userId, userId))
+      .orderBy(sql`${expenses.createdAt} DESC`);
+    return userExpenses;
+  }
+
+  async getExpenseById(id: string): Promise<Expense | undefined> {
+    const [expense] = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.id, id));
+    return expense || undefined;
+  }
+
+  async getExpensesByStoreId(storeId: string): Promise<Expense[]> {
+    const storeExpenses = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.storeId, storeId))
+      .orderBy(sql`${expenses.createdAt} DESC`);
+    return storeExpenses;
+  }
+
+  async getExpensesByCategory(categoryId: string): Promise<Expense[]> {
+    const categoryExpenses = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.categoryId, categoryId))
+      .orderBy(sql`${expenses.createdAt} DESC`);
+    return categoryExpenses;
+  }
+
+  async getExpensesByStatus(status: string): Promise<Expense[]> {
+    const statusExpenses = await db
+      .select()
+      .from(expenses)
+      .where(eq(expenses.status, status))
+      .orderBy(sql`${expenses.createdAt} DESC`);
+    return statusExpenses;
+  }
+
+  async createExpense(expenseData: InsertExpense & { userId: string }): Promise<Expense> {
+    // Convert expenseDate string to Date if present
+    const insertData: any = { ...expenseData };
+    if (insertData.expenseDate && typeof insertData.expenseDate === 'string') {
+      insertData.expenseDate = new Date(insertData.expenseDate);
+    }
+    
+    const [expense] = await db
+      .insert(expenses)
+      .values(insertData)
+      .returning();
+    return expense;
+  }
+
+  async updateExpense(id: string, userId: string, updates: Partial<InsertExpense>): Promise<Expense> {
+    // Convert expenseDate string to Date if present
+    const updateData: any = { ...updates };
+    if (updateData.expenseDate && typeof updateData.expenseDate === 'string') {
+      updateData.expenseDate = new Date(updateData.expenseDate);
+    }
+    
+    const [expense] = await db
+      .update(expenses)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
+      .returning();
+    
+    if (!expense) {
+      throw new Error("Expense not found");
+    }
+    
+    return expense;
+  }
+
+  async deleteExpense(id: string, userId: string): Promise<void> {
+    const result = await db
+      .delete(expenses)
+      .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Expense not found");
     }
   }
 }

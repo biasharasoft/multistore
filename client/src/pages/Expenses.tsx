@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,89 +51,88 @@ import {
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { ExpenseStats } from "@/components/expenses/ExpenseStats";
 import { ExpenseFilters } from "@/components/expenses/ExpenseFilters";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Expense {
   id: string;
-  date: string;
+  expenseDate: string;
   description: string;
-  category: string;
-  amount: number;
+  categoryId: string;
+  amount: number;  // In cents
   vendor: string;
   status: 'paid' | 'pending' | 'overdue';
-  receipt?: string;
-  store: string;
+  receiptUrl?: string;
+  receiptFileName?: string;
+  storeId: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
 }
 
-const mockExpenses: Expense[] = [
-  {
-    id: "1",
-    date: "2024-01-15",
-    description: "Office Supplies - Stationery",
-    category: "Office Supplies",
-    amount: 245.50,
-    vendor: "Office Depot",
-    status: "paid",
-    store: "Downtown Branch"
-  },
-  {
-    id: "2",
-    date: "2024-01-14",
-    description: "Monthly Rent Payment",
-    category: "Rent",
-    amount: 2500.00,
-    vendor: "Property Management Co.",
-    status: "paid",
-    store: "Mall Location"
-  },
-  {
-    id: "3",
-    date: "2024-01-13",
-    description: "Utility Bills - Electricity",
-    category: "Utilities",
-    amount: 180.25,
-    vendor: "Electric Company",
-    status: "pending",
-    store: "Airport Store"
-  },
-  {
-    id: "4",
-    date: "2024-01-12",
-    description: "Marketing Campaign",
-    category: "Marketing",
-    amount: 850.00,
-    vendor: "Digital Agency",
-    status: "overdue",
-    store: "Downtown Branch"
-  },
-  {
-    id: "5",
-    date: "2024-01-11",
-    description: "Equipment Maintenance",
-    category: "Maintenance",
-    amount: 320.75,
-    vendor: "Tech Solutions",
-    status: "paid",
-    store: "Mall Location"
-  }
-];
-
-const Expenses = () => {
-  const [expenses, setExpenses] = useState<Expense[]>(mockExpenses);
+export default function Expenses() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [selectedStore, setSelectedStore] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedStore, setSelectedStore] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  });
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
-  const [dateFilter, setDateFilter] = useState("Today");
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Fetch expenses
+  const { data: expenses = [], isLoading: isLoadingExpenses } = useQuery<Expense[]>({
+    queryKey: ['/api/expenses'],
+  });
 
+  // Fetch categories and stores for filtering
+  const { data: categories = [] } = useQuery<any[]>({
+    queryKey: ['/api/expenses-categories/active'],
+  });
+
+  const { data: stores = [] } = useQuery<any[]>({
+    queryKey: ['/api/stores'],
+  });
+  
+  const statuses = ['all', 'paid', 'pending', 'overdue'];
+  
+  // Create expense mutation
+  const createExpenseMutation = useMutation({
+    mutationFn: async (expenseData: any) => {
+      return await apiRequest('/api/expenses', {
+        method: 'POST',
+        body: JSON.stringify(expenseData),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Expense has been recorded successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      setIsAddExpenseOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create expense",
+        variant: "destructive",
+      });
+    },
+  });
+  
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          expense.vendor.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || expense.category === selectedCategory;
+    const matchesCategory = selectedCategory === "all" || expense.categoryId === selectedCategory;
     const matchesStatus = selectedStatus === "all" || expense.status === selectedStatus;
-    const matchesStore = selectedStore === "all" || expense.store === selectedStore;
+    const matchesStore = selectedStore === "all" || expense.storeId === selectedStore;
     
     return matchesSearch && matchesCategory && matchesStatus && matchesStore;
   });
@@ -142,28 +140,46 @@ const Expenses = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
-        return <Badge className="bg-success text-success-foreground">Paid</Badge>;
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</Badge>;
       case 'pending':
-        return <Badge className="bg-warning text-warning-foreground">Pending</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">Pending</Badge>;
       case 'overdue':
-        return <Badge className="bg-destructive text-destructive-foreground">Overdue</Badge>;
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">Overdue</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const handleAddExpense = (newExpense: Omit<Expense, 'id'>) => {
-    const expense: Expense = {
-      ...newExpense,
-      id: Date.now().toString()
-    };
-    setExpenses([expense, ...expenses]);
-    setIsAddExpenseOpen(false);
+  const handleAddExpense = (expenseData: any) => {
+    createExpenseMutation.mutate(expenseData);
   };
 
-  const handleDeleteExpense = (id: string) => {
-    setExpenses(expenses.filter(expense => expense.id !== id));
+  const formatAmount = (amountInCents: number) => {
+    return `$${(amountInCents / 100).toFixed(2)}`;
   };
+
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : categoryId;
+  };
+
+  const getStoreName = (storeId: string) => {
+    const store = stores.find(s => s.id === storeId);
+    return store ? store.name : storeId;
+  };
+
+  if (isLoadingExpenses) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Expenses</h1>
+            <p className="text-muted-foreground">Loading expenses...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -177,7 +193,7 @@ const Expenses = () => {
         </div>
         <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" data-testid="button-add-expense">
               <Plus className="h-4 w-4" />
               Add Expense
             </Button>
@@ -195,177 +211,199 @@ const Expenses = () => {
       </div>
 
       {/* Stats Cards */}
-      <ExpenseStats expenses={expenses} />
-
-      {/* Date Filter */}
-      <div className="flex items-center gap-4 bg-card p-4 rounded-lg border">
-        <Select value={dateFilter} onValueChange={setDateFilter}>
-          <SelectTrigger className="w-48">
-            <CalendarIcon className="h-4 w-4" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Today">Today</SelectItem>
-            <SelectItem value="Week">Week</SelectItem>
-            <SelectItem value="Month">Month</SelectItem>
-            <SelectItem value="Quarter">Quarter</SelectItem>
-            <SelectItem value="Semi Annual">Semi Annual</SelectItem>
-            <SelectItem value="Year">Year</SelectItem>
-            <SelectItem value="Date Range">Date Range</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {dateFilter === "Date Range" && (
-          <div className="flex items-center gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[140px] justify-start text-left font-normal",
-                    !startDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, "MMM dd") : "Start Date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={setStartDate}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-            
-            <span className="text-muted-foreground">to</span>
-            
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[140px] justify-start text-left font-normal",
-                    !endDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, "MMM dd") : "End Date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={setEndDate}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatAmount(expenses.reduce((sum, expense) => sum + expense.amount, 0))}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Paid</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatAmount(expenses.filter(e => e.status === 'paid').reduce((sum, expense) => sum + expense.amount, 0))}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Receipt className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatAmount(expenses.filter(e => e.status === 'pending').reduce((sum, expense) => sum + expense.amount, 0))}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatAmount(expenses.filter(e => e.status === 'overdue').reduce((sum, expense) => sum + expense.amount, 0))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Filters */}
-      <ExpenseFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-        selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
-        selectedStore={selectedStore}
-        onStoreChange={setSelectedStore}
-      />
+      {/* Search and Filters */}
+      <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search expenses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+              data-testid="input-search-expenses"
+            />
+          </div>
+        </div>
+        
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-[180px]" data-testid="select-filter-category">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        <Select value={selectedStore} onValueChange={setSelectedStore}>
+          <SelectTrigger className="w-[180px]" data-testid="select-filter-store">
+            <SelectValue placeholder="Store" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stores</SelectItem>
+            {stores.map((store) => (
+              <SelectItem key={store.id} value={store.id}>
+                {store.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+          <SelectTrigger className="w-[180px]" data-testid="select-filter-status">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Expenses Table */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
-              Expense Records
-            </CardTitle>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-          </div>
+          <CardTitle>Expenses List</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Store</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredExpenses.map((expense) => (
-                <TableRow key={expense.id}>
-                  <TableCell className="font-medium">
-                    {new Date(expense.date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>{expense.description}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{expense.category}</Badge>
-                  </TableCell>
-                  <TableCell>{expense.vendor}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {expense.store}
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    TSh {expense.amount.toFixed(2)}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(expense.status)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDeleteExpense(expense.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          {filteredExpenses.length === 0 && (
+          {filteredExpenses.length === 0 ? (
             <div className="text-center py-8">
-              <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <Receipt className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No expenses found</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || selectedCategory !== "all" || selectedStatus !== "all" 
-                  ? "Try adjusting your filters" 
-                  : "Start by adding your first expense"}
+              <p className="text-muted-foreground mb-4">
+                {expenses.length === 0 
+                  ? "Start by adding your first business expense."
+                  : "Try adjusting your search criteria."
+                }
               </p>
             </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Vendor</TableHead>
+                  <TableHead>Store</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredExpenses.map((expense) => (
+                  <TableRow key={expense.id}>
+                    <TableCell>
+                      {format(new Date(expense.expenseDate), 'MMM dd, yyyy')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-[200px] truncate" title={expense.description}>
+                        {expense.description}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {getCategoryName(expense.categoryId)}
+                    </TableCell>
+                    <TableCell>{expense.vendor}</TableCell>
+                    <TableCell>
+                      {getStoreName(expense.storeId)}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatAmount(expense.amount)}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(expense.status)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          data-testid={`button-view-expense-${expense.id}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          data-testid={`button-edit-expense-${expense.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          data-testid={`button-delete-expense-${expense.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
     </div>
   );
-};
-
-export default Expenses;
+}
