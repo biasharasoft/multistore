@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Search, Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, User, UserPlus, CheckCircle, Clock } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, User, UserPlus, CheckCircle, Clock, Store } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,14 +11,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
+import { useStore } from "@/hooks/useStore";
+import { formatCurrency } from "@/lib/currency";
 
 interface Product {
   id: string;
   name: string;
-  price: number;
+  price: number; // This will be retail price in cents from DB
   category: string;
   stock: number;
   image?: string;
+  retailPrice: number;
+  retailDiscount: number;
+}
+
+interface InventoryItem {
+  inventoryId: string;
+  productId: string;
+  productName: string;
+  productCategory: string;
+  productBarcode: string | null;
+  productImage: string | null;
+  productRetailPrice: number;
+  productRetailDiscount: number;
+  productWholesalerPrice: number;
+  productWholesalerDiscount: number;
+  productCost: number;
+  productLowStockThreshold: number;
+  productStatus: string;
+  currentQuantity: number;
+  inventoryUpdatedAt: string;
+  storeId: string;
 }
 
 interface CartItem extends Product {
@@ -33,6 +57,7 @@ interface Customer {
 
 const POS = () => {
   const { toast } = useToast();
+  const { selectedStore } = useStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -43,25 +68,49 @@ const POS = () => {
     { id: "jane-smith", name: "Jane Smith", email: "jane@example.com", phone: "+0987654321" },
     { id: "mike-wilson", name: "Mike Wilson", email: "mike@example.com", phone: "+1122334455" },
   ]);
+
+  // Fetch inventory data for the selected store
+  const { data: inventoryItems = [], isLoading: inventoryLoading } = useQuery<InventoryItem[]>({
+    queryKey: ['/api/inventory', selectedStore],
+    queryFn: async () => {
+      if (!selectedStore) return [];
+      const response = await fetch(`/api/inventory?storeId=${selectedStore}`);
+      if (!response.ok) throw new Error('Failed to fetch inventory');
+      return response.json();
+    },
+    enabled: !!selectedStore,
+  });
+
+  // Fetch company data for currency
+  const { data: company } = useQuery({
+    queryKey: ['/api/company'],
+  });
   const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "" });
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentTiming, setPaymentTiming] = useState("now");
 
-  // Mock data
-  const products: Product[] = [
-    { id: "1", name: "iPhone 15", price: 999.99, category: "Electronics", stock: 25 },
-    { id: "2", name: "Coffee Mug", price: 12.99, category: "Kitchen", stock: 50 },
-    { id: "3", name: "Wireless Headphones", price: 79.99, category: "Electronics", stock: 15 },
-    { id: "4", name: "Organic Coffee Beans", price: 24.99, category: "Food", stock: 30 },
-    { id: "5", name: "Laptop Stand", price: 45.99, category: "Office", stock: 20 },
-    { id: "6", name: "Water Bottle", price: 18.99, category: "Kitchen", stock: 40 },
-    { id: "7", name: "Bluetooth Speaker", price: 129.99, category: "Electronics", stock: 12 },
-    { id: "8", name: "Desk Lamp", price: 34.99, category: "Office", stock: 18 },
-  ];
+  // Transform inventory data to products format
+  const products: Product[] = useMemo(() => {
+    return inventoryItems
+      .filter(item => item.currentQuantity > 0 && item.productStatus === 'active') // Only show in-stock active products
+      .map(item => ({
+        id: item.productId,
+        name: item.productName,
+        price: item.productRetailPrice / 100, // Convert from cents to currency units
+        category: item.productCategory || 'Uncategorized',
+        stock: item.currentQuantity,
+        image: item.productImage || undefined,
+        retailPrice: item.productRetailPrice,
+        retailDiscount: item.productRetailDiscount
+      }));
+  }, [inventoryItems]);
 
-  const categories = ["all", ...Array.from(new Set(products.map(p => p.category)))];
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(p => p.category))];
+    return ["all", ...uniqueCategories];
+  }, [products]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -146,7 +195,7 @@ const POS = () => {
     
     toast({
       title: action,
-      description: `Transaction for TSh ${total.toFixed(2)} using ${paymentMethod}`,
+      description: `Transaction for ${formatCurrency(total, company?.currency || 'tzs')} using ${paymentMethod}`,
     });
     
     setCart([]);
@@ -156,9 +205,58 @@ const POS = () => {
     setPaymentTiming("now");
   };
 
+  // Show store selection warning if no store is selected
+  if (!selectedStore) {
+    return (
+      <div className="min-h-screen bg-background w-full fixed inset-0 z-50">
+        <div className="w-full h-full p-6">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold tracking-tight">Point of Sale</h1>
+            <p className="text-muted-foreground">Process sales quickly and efficiently</p>
+          </div>
+
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center space-y-4">
+              <Store className="h-12 w-12 text-muted-foreground" />
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Select a Store</h3>
+                <p className="text-muted-foreground max-w-md">
+                  Please select a store from the sidebar to access the Point of Sale system. 
+                  Product inventory is managed separately for each store.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while fetching inventory
+  if (inventoryLoading) {
+    return (
+      <div className="min-h-screen bg-background w-full fixed inset-0 z-50">
+        <div className="w-full h-full p-6">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold tracking-tight">Point of Sale</h1>
+            <p className="text-muted-foreground">Loading inventory data...</p>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background w-full fixed inset-0 z-50">
       <div className="w-full h-full p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Point of Sale</h1>
+          <p className="text-muted-foreground">Process sales quickly and efficiently</p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-6rem)]">
           
           {/* Products Section */}
@@ -188,7 +286,19 @@ const POS = () => {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto max-h-[calc(100vh-12rem)]">
-              {filteredProducts.map(product => (
+              {filteredProducts.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                  <div className="text-4xl mb-4">📦</div>
+                  <h3 className="text-lg font-medium mb-2">No products available</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    {products.length === 0 
+                      ? "No products are currently in stock for this store. Add inventory to start selling."
+                      : "No products match your current search and filter criteria."
+                    }
+                  </p>
+                </div>
+              ) : (
+                filteredProducts.map(product => (
                 <Card
                   key={product.id}
                   className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
@@ -201,8 +311,10 @@ const POS = () => {
                     <h3 className="font-medium text-sm mb-2 line-clamp-2">{product.name}</h3>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-primary">TSh {product.price}</span>
-                        <Badge variant={product.stock > 10 ? "default" : "destructive"} className="text-xs">
+                        <span className="text-lg font-bold text-primary">
+                          {formatCurrency(product.price, company?.currency || 'tzs')}
+                        </span>
+                        <Badge variant={product.stock > 10 ? "default" : product.stock > 0 ? "secondary" : "destructive"} className="text-xs">
                           {product.stock}
                         </Badge>
                       </div>
@@ -212,7 +324,8 @@ const POS = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -308,7 +421,9 @@ const POS = () => {
                       <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-medium truncate">{item.name}</h4>
-                          <p className="text-xs text-muted-foreground">TSh {item.price.toFixed(2)} each</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatCurrency(item.price, company?.currency || 'tzs')} each
+                          </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -348,16 +463,16 @@ const POS = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>TSh {subtotal.toFixed(2)}</span>
+                    <span>{formatCurrency(subtotal, company?.currency || 'tzs')}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Tax (8%):</span>
-                    <span>TSh {tax.toFixed(2)}</span>
+                    <span>{formatCurrency(tax, company?.currency || 'tzs')}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total:</span>
-                    <span className="text-primary">TSh {total.toFixed(2)}</span>
+                    <span className="text-primary">{formatCurrency(total, company?.currency || 'tzs')}</span>
                   </div>
                 </div>
 
@@ -433,16 +548,16 @@ const POS = () => {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span>Subtotal:</span>
-                              <span>${subtotal.toFixed(2)}</span>
+                              <span>{formatCurrency(subtotal, company?.currency || 'tzs')}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Tax (8%):</span>
-                              <span>${tax.toFixed(2)}</span>
+                              <span>{formatCurrency(tax, company?.currency || 'tzs')}</span>
                             </div>
                             <Separator />
                             <div className="flex justify-between font-bold">
                               <span>Total:</span>
-                              <span className="text-primary">${total.toFixed(2)}</span>
+                              <span className="text-primary">{formatCurrency(total, company?.currency || 'tzs')}</span>
                             </div>
                           </div>
                         </div>
