@@ -1,6 +1,7 @@
-import { users, companies, stores, regions, productsCategories, expensesCategories, expenses, products, suppliers, customers, purchases, appearanceThemesSettings, industriesCategories, teamMembers, teamInvitations, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Expense, type InsertExpense, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory, type TeamMember, type InsertTeamMember, type TeamInvitation, type InsertTeamInvitation } from "@shared/schema";
+import { users, companies, stores, regions, productsCategories, expensesCategories, expenses, products, suppliers, customers, purchases, inventoryBatch, appearanceThemesSettings, industriesCategories, teamMembers, teamInvitations, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Expense, type InsertExpense, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type InventoryBatch, type InsertInventoryBatch, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory, type TeamMember, type InsertTeamMember, type TeamInvitation, type InsertTeamInvitation } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
+import crypto from "crypto";
 
 // Interface for storage operations
 export interface IStorage {
@@ -91,6 +92,13 @@ export interface IStorage {
   createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase>;
   updatePurchase(id: string, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase>;
   deletePurchase(id: string, userId: string): Promise<void>;
+  
+  // Inventory Batch operations
+  getInventoryBatchesByProductId(productId: string): Promise<InventoryBatch[]>;
+  getInventoryBatchById(id: string): Promise<InventoryBatch | undefined>;
+  createInventoryBatch(batch: InsertInventoryBatch): Promise<InventoryBatch>;
+  updateInventoryBatch(id: string, updates: Partial<InsertInventoryBatch>): Promise<InventoryBatch>;
+  deleteInventoryBatch(id: string): Promise<void>;
   
   // Appearance theme settings operations
   getAppearanceSettings(userId: string): Promise<AppearanceThemesSettings | undefined>;
@@ -687,10 +695,33 @@ export class DatabaseStorage implements IStorage {
       insertData.purchaseDate = new Date(insertData.purchaseDate);
     }
     
+    // Create the purchase record
     const [purchase] = await db
       .insert(purchases)
       .values([insertData])
       .returning();
+
+    // Get product details to copy wholesaler and retail pricing
+    const product = await this.getProductById(purchaseData.productId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    // Create inventory batch record
+    const batchData: InsertInventoryBatch = {
+      productId: purchaseData.productId,
+      batchNumber: this.generateBatchNumber(),
+      quantity: purchaseData.quantity,
+      totalCost: purchaseData.totalCost,
+      buyingPrice: Math.round(purchaseData.totalCost / purchaseData.quantity), // total cost divided by quantity
+      retailPrice: purchaseData.sellingPrice, // use the selling price from the purchase
+      retailDiscount: product.retailDiscount || 0, // copy from product
+      wholesalerPrice: product.wholesalerPrice || 0, // copy from product
+      wholesalerDiscount: product.wholesalerDiscount || 0, // copy from product
+    };
+
+    await this.createInventoryBatch(batchData);
+    
     return purchase;
   }
 
@@ -726,6 +757,65 @@ export class DatabaseStorage implements IStorage {
     if (result.length === 0) {
       throw new Error("Purchase not found");
     }
+  }
+
+  // Inventory Batch operations
+  async getInventoryBatchesByProductId(productId: string): Promise<InventoryBatch[]> {
+    const batches = await db
+      .select()
+      .from(inventoryBatch)
+      .where(eq(inventoryBatch.productId, productId))
+      .orderBy(sql`${inventoryBatch.createdAt} DESC`);
+    return batches;
+  }
+
+  async getInventoryBatchById(id: string): Promise<InventoryBatch | undefined> {
+    const [batch] = await db
+      .select()
+      .from(inventoryBatch)
+      .where(eq(inventoryBatch.id, id));
+    return batch || undefined;
+  }
+
+  async createInventoryBatch(batchData: InsertInventoryBatch): Promise<InventoryBatch> {
+    const [batch] = await db
+      .insert(inventoryBatch)
+      .values([batchData])
+      .returning();
+    return batch;
+  }
+
+  async updateInventoryBatch(id: string, updates: Partial<InsertInventoryBatch>): Promise<InventoryBatch> {
+    const [batch] = await db
+      .update(inventoryBatch)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(inventoryBatch.id, id))
+      .returning();
+    
+    if (!batch) {
+      throw new Error("Inventory batch not found");
+    }
+    
+    return batch;
+  }
+
+  async deleteInventoryBatch(id: string): Promise<void> {
+    const result = await db
+      .delete(inventoryBatch)
+      .where(eq(inventoryBatch.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Inventory batch not found");
+    }
+  }
+
+  // Utility function to generate 20-character alphanumeric batch number
+  private generateBatchNumber(): string {
+    return crypto.randomBytes(10).toString('hex').toUpperCase();
   }
 
 
