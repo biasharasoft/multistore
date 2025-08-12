@@ -1,4 +1,4 @@
-import { users, companies, stores, regions, productsCategories, expensesCategories, expenses, products, suppliers, customers, purchases, inventoryBatch, appearanceThemesSettings, industriesCategories, teamMembers, teamInvitations, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Expense, type InsertExpense, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type InventoryBatch, type InsertInventoryBatch, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory, type TeamMember, type InsertTeamMember, type TeamInvitation, type InsertTeamInvitation } from "@shared/schema";
+import { users, companies, stores, regions, productsCategories, expensesCategories, expenses, products, suppliers, customers, purchases, inventory, inventoryBatch, appearanceThemesSettings, industriesCategories, teamMembers, teamInvitations, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Expense, type InsertExpense, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type Inventory, type InsertInventory, type InventoryBatch, type InsertInventoryBatch, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory, type TeamMember, type InsertTeamMember, type TeamInvitation, type InsertTeamInvitation } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 import crypto from "crypto";
@@ -92,6 +92,14 @@ export interface IStorage {
   createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase>;
   updatePurchase(id: string, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase>;
   deletePurchase(id: string, userId: string): Promise<void>;
+  
+  // Inventory operations
+  getInventoryByProductId(productId: string): Promise<Inventory | undefined>;
+  getInventoryById(id: string): Promise<Inventory | undefined>;
+  createInventory(inventory: InsertInventory): Promise<Inventory>;
+  updateInventory(id: string, updates: Partial<InsertInventory>): Promise<Inventory>;
+  deleteInventory(id: string): Promise<void>;
+  upsertInventory(productId: string, quantity: number): Promise<Inventory>;
   
   // Inventory Batch operations
   getInventoryBatchesByProductId(productId: string): Promise<InventoryBatch[]>;
@@ -721,6 +729,9 @@ export class DatabaseStorage implements IStorage {
     };
 
     await this.createInventoryBatch(batchData);
+
+    // Update inventory to increment product quantity
+    await this.upsertInventory(purchaseData.productId, purchaseData.quantity);
     
     return purchase;
   }
@@ -810,6 +821,76 @@ export class DatabaseStorage implements IStorage {
     
     if (result.length === 0) {
       throw new Error("Inventory batch not found");
+    }
+  }
+
+  // Inventory operations
+  async getInventoryByProductId(productId: string): Promise<Inventory | undefined> {
+    const [inventoryRecord] = await db
+      .select()
+      .from(inventory)
+      .where(eq(inventory.productId, productId));
+    return inventoryRecord || undefined;
+  }
+
+  async getInventoryById(id: string): Promise<Inventory | undefined> {
+    const [inventoryRecord] = await db
+      .select()
+      .from(inventory)
+      .where(eq(inventory.id, id));
+    return inventoryRecord || undefined;
+  }
+
+  async createInventory(inventoryData: InsertInventory): Promise<Inventory> {
+    const [inventoryRecord] = await db
+      .insert(inventory)
+      .values([inventoryData])
+      .returning();
+    return inventoryRecord;
+  }
+
+  async updateInventory(id: string, updates: Partial<InsertInventory>): Promise<Inventory> {
+    const [inventoryRecord] = await db
+      .update(inventory)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(inventory.id, id))
+      .returning();
+    
+    if (!inventoryRecord) {
+      throw new Error("Inventory record not found");
+    }
+    
+    return inventoryRecord;
+  }
+
+  async deleteInventory(id: string): Promise<void> {
+    const result = await db
+      .delete(inventory)
+      .where(eq(inventory.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Inventory record not found");
+    }
+  }
+
+  async upsertInventory(productId: string, quantityToAdd: number): Promise<Inventory> {
+    const existingInventory = await this.getInventoryByProductId(productId);
+    
+    if (existingInventory) {
+      // Update existing inventory by adding the new quantity
+      return await this.updateInventory(existingInventory.id, {
+        quantity: existingInventory.quantity + quantityToAdd
+      });
+    } else {
+      // Create new inventory record
+      return await this.createInventory({
+        productId,
+        quantity: quantityToAdd
+      });
     }
   }
 
