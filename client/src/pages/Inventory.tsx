@@ -1,389 +1,214 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Filter, Trash2, AlertTriangle, Package, TrendingUp, TrendingDown } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, Package, TrendingUp, TrendingDown, AlertTriangle, Edit, Eye, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/currency";
+import { apiRequest } from "@/lib/queryClient";
+
 interface InventoryItem {
-  id: string;
-  name: string;
-  sku: string;
-  category: string;
-  currentStock: number;
-  countingStock?: number;
-  adjustmentStock?: number;
-  minStock: number;
-  maxStock: number;
-  unitPrice: number;
-  supplier: string;
-  lastUpdated: string;
-  status: "in-stock" | "low-stock" | "out-of-stock";
+  inventoryId: string;
+  productId: string;
+  productName: string;
+  productCategory: string | null;
+  productBarcode: string | null;
+  productImage: string | null;
+  productRetailPrice: number;
+  productRetailDiscount: number | null;
+  productWholesalerPrice: number;
+  productWholesalerDiscount: number | null;
+  productCost: number;
+  productLowStockThreshold: number;
+  productStatus: string;
+  currentQuantity: number;
+  inventoryUpdatedAt: string;
 }
-interface SelectedItem extends InventoryItem {
-  quantity?: number;
-  costPrice?: number;
-  sellingPrice?: number;
+
+interface InventoryBatch {
+  batchId: string;
+  productId: string;
+  productName: string;
+  productCategory: string | null;
+  batchNumber: string;
+  quantity: number;
+  totalCost: number;
+  buyingPrice: number;
+  retailPrice: number;
+  retailDiscount: number | null;
+  wholesalerPrice: number;
+  wholesalerDiscount: number | null;
+  createdAt: string;
 }
-const mockInventoryData: InventoryItem[] = [{
-  id: "1",
-  name: "Premium Coffee Beans",
-  sku: "PCB-001",
-  category: "Beverages",
-  currentStock: 150,
-  minStock: 50,
-  maxStock: 300,
-  unitPrice: 12.99,
-  supplier: "Coffee Co.",
-  lastUpdated: "2024-01-15",
-  status: "in-stock"
-}, {
-  id: "2",
-  name: "Chocolate Croissant",
-  sku: "CHC-002",
-  category: "Pastries",
-  currentStock: 25,
-  minStock: 30,
-  maxStock: 100,
-  unitPrice: 3.50,
-  supplier: "Bakery Plus",
-  lastUpdated: "2024-01-14",
-  status: "low-stock"
-}, {
-  id: "3",
-  name: "Organic Tea Bags",
-  sku: "OTB-003",
-  category: "Beverages",
-  currentStock: 0,
-  minStock: 20,
-  maxStock: 200,
-  unitPrice: 8.99,
-  supplier: "Tea Masters",
-  lastUpdated: "2024-01-13",
-  status: "out-of-stock"
-}];
+
 export default function Inventory() {
-  const [inventory, setInventory] = useState<InventoryItem[]>(mockInventoryData);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("inventory");
+  const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
+  const [newQuantity, setNewQuantity] = useState<number>(0);
 
-  // Fetch company information to get currency setting
+  // Fetch inventory data
+  const { data: inventoryItems = [], isLoading: inventoryLoading } = useQuery<InventoryItem[]>({
+    queryKey: ['/api/inventory'],
+  });
+
+  // Fetch inventory batches data
+  const { data: inventoryBatches = [], isLoading: batchesLoading } = useQuery<InventoryBatch[]>({
+    queryKey: ['/api/inventory/batches'],
+  });
+
+  // Fetch company data for currency
   const { data: company } = useQuery<any>({
     queryKey: ['/api/company'],
   });
-  const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
-  const [adjustmentItems, setAdjustmentItems] = useState<SelectedItem[]>([]);
-  const [productSearchTerm, setProductSearchTerm] = useState("");
-  const [adjustmentSearchTerm, setAdjustmentSearchTerm] = useState("");
-  const {
-    toast
-  } = useToast();
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
-    const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
-  const categories = [...new Set(inventory.map(item => item.category))];
-  const filteredProducts = inventory.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) || product.sku.toLowerCase().includes(productSearchTerm.toLowerCase());
-    return matchesSearch;
-  });
-  const filteredAdjustmentProducts = inventory.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(adjustmentSearchTerm.toLowerCase()) || product.sku.toLowerCase().includes(adjustmentSearchTerm.toLowerCase());
-    return matchesSearch;
-  });
-  const addSelectedItem = (product: InventoryItem) => {
-    if (!selectedItems.find(item => item.id === product.id)) {
-      setSelectedItems(prev => [...prev, {
-        ...product,
-        quantity: 1,
-        costPrice: product.unitPrice,
-        sellingPrice: product.unitPrice
-      }]);
-    }
-  };
-  const addAdjustmentItem = (product: InventoryItem) => {
-    if (!adjustmentItems.find(item => item.id === product.id)) {
-      setAdjustmentItems(prev => [...prev, {
-        ...product,
-        quantity: 0,
-        costPrice: product.unitPrice,
-        sellingPrice: product.unitPrice
-      }]);
-    }
-  };
-  const removeSelectedItem = (id: string) => {
-    setSelectedItems(prev => prev.filter(item => item.id !== id));
-  };
-  const removeAdjustmentItem = (id: string) => {
-    setAdjustmentItems(prev => prev.filter(item => item.id !== id));
-  };
-  const updateSelectedItem = (id: string, field: keyof SelectedItem, value: number) => {
-    setSelectedItems(prev => prev.map(item => item.id === id ? {
-      ...item,
-      [field]: value
-    } : item));
-  };
-  const updateAdjustmentItem = (id: string, field: keyof SelectedItem, value: number) => {
-    setAdjustmentItems(prev => prev.map(item => item.id === id ? {
-      ...item,
-      [field]: value
-    } : item));
-  };
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "in-stock":
-        return <Badge variant="default" className="bg-green-100 text-green-800">In Stock</Badge>;
-      case "low-stock":
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Low Stock</Badge>;
-      case "out-of-stock":
-        return <Badge variant="destructive">Out of Stock</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-  const handleAddItem = () => {
-    if (selectedItems.length > 0) {
-      // Update counting stock for selected items
-      selectedItems.forEach(item => {
-        const existingItemIndex = inventory.findIndex(inv => inv.id === item.id);
-        if (existingItemIndex !== -1) {
-          setInventory(prev => prev.map((inv, idx) => idx === existingItemIndex ? {
-            ...inv,
-            countingStock: item.quantity || 0
-          } : inv));
+
+  // Update inventory mutation
+  const updateInventoryMutation = useMutation({
+    mutationFn: async ({ inventoryId, quantity }: { inventoryId: string; quantity: number }) => {
+      return apiRequest(`/api/inventory/${inventoryId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ quantity }),
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
       toast({
-        title: "Counting Saved",
-        description: `Counting for ${selectedItems.length} item(s) has been saved.`
+        title: "Inventory Updated",
+        description: "Inventory quantity has been updated successfully."
       });
-      setSelectedItems([]);
-      setProductSearchTerm("");
-      setIsAddDialogOpen(false);
+      setIsAdjustDialogOpen(false);
+      setSelectedInventoryItem(null);
+      setNewQuantity(0);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update inventory",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Calculate inventory statistics
+  const inventoryStats = useMemo(() => {
+    const totalItems = inventoryItems.length;
+    const totalValue = inventoryItems.reduce((sum, item) => {
+      return sum + (item.currentQuantity * item.productRetailPrice);
+    }, 0);
+    const lowStockItems = inventoryItems.filter(item => 
+      item.currentQuantity <= item.productLowStockThreshold && item.currentQuantity > 0
+    ).length;
+    const outOfStockItems = inventoryItems.filter(item => item.currentQuantity === 0).length;
+    
+    return { totalItems, totalValue, lowStockItems, outOfStockItems };
+  }, [inventoryItems]);
+
+  // Filter inventory items
+  const filteredInventoryItems = useMemo(() => {
+    return inventoryItems.filter(item => {
+      const matchesSearch = item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.productBarcode && item.productBarcode.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesCategory = categoryFilter === "all" || 
+        (item.productCategory && item.productCategory === categoryFilter);
+      
+      let matchesStatus = true;
+      if (statusFilter === "in-stock") {
+        matchesStatus = item.currentQuantity > item.productLowStockThreshold;
+      } else if (statusFilter === "low-stock") {
+        matchesStatus = item.currentQuantity <= item.productLowStockThreshold && item.currentQuantity > 0;
+      } else if (statusFilter === "out-of-stock") {
+        matchesStatus = item.currentQuantity === 0;
+      }
+      
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [inventoryItems, searchTerm, categoryFilter, statusFilter]);
+
+  // Filter inventory batches
+  const filteredInventoryBatches = useMemo(() => {
+    return inventoryBatches.filter(batch => {
+      const matchesSearch = batch.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        batch.batchNumber.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesCategory = categoryFilter === "all" || 
+        (batch.productCategory && batch.productCategory === categoryFilter);
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [inventoryBatches, searchTerm, categoryFilter]);
+
+  // Get unique categories
+  const categories = useMemo(() => {
+    const allCategories = inventoryItems
+      .map(item => item.productCategory)
+      .filter(Boolean);
+    return [...new Set(allCategories)] as string[];
+  }, [inventoryItems]);
+
+  // Get status badge
+  const getStatusBadge = (item: InventoryItem) => {
+    if (item.currentQuantity === 0) {
+      return <Badge variant="destructive" data-testid={`status-out-of-stock-${item.productId}`}>Out of Stock</Badge>;
+    } else if (item.currentQuantity <= item.productLowStockThreshold) {
+      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800" data-testid={`status-low-stock-${item.productId}`}>Low Stock</Badge>;
+    } else {
+      return <Badge variant="default" className="bg-green-100 text-green-800" data-testid={`status-in-stock-${item.productId}`}>In Stock</Badge>;
     }
   };
-  const handleAdjustment = () => {
-    if (adjustmentItems.length > 0) {
-      // Update adjustment stock for selected items
-      adjustmentItems.forEach(item => {
-        const existingItemIndex = inventory.findIndex(inv => inv.id === item.id);
-        if (existingItemIndex !== -1) {
-          setInventory(prev => prev.map((inv, idx) => idx === existingItemIndex ? {
-            ...inv,
-            adjustmentStock: item.quantity || 0
-          } : inv));
-        }
-      });
-      toast({
-        title: "Adjustment Saved",
-        description: `Adjustment for ${adjustmentItems.length} item(s) has been saved.`
-      });
-      setAdjustmentItems([]);
-      setAdjustmentSearchTerm("");
-      setIsAdjustmentDialogOpen(false);
-    }
+
+  // Handle inventory adjustment
+  const handleAdjustInventory = (item: InventoryItem) => {
+    setSelectedInventoryItem(item);
+    setNewQuantity(item.currentQuantity);
+    setIsAdjustDialogOpen(true);
   };
-  const handleDeleteItem = (id: string) => {
-    setInventory(prev => prev.filter(item => item.id !== id));
-    toast({
-      title: "Item Deleted",
-      description: "Inventory item has been removed."
+
+  const handleSaveAdjustment = () => {
+    if (!selectedInventoryItem) return;
+    
+    updateInventoryMutation.mutate({
+      inventoryId: selectedInventoryItem.inventoryId,
+      quantity: newQuantity
     });
   };
-  const lowStockItems = inventory.filter(item => item.status === "low-stock").length;
-  const outOfStockItems = inventory.filter(item => item.status === "out-of-stock").length;
-  const totalValue = inventory.reduce((sum, item) => sum + item.currentStock * item.unitPrice, 0);
-  return <div className="container mx-auto p-6 space-y-6">
+
+  return (
+    <div className="space-y-6" data-testid="inventory-page">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Inventory Management</h1>
-          <p className="text-muted-foreground">Track and manage your inventory items</p>
+          <h1 className="text-3xl font-bold tracking-tight" data-testid="page-title">Inventory Management</h1>
+          <p className="text-muted-foreground">Monitor stock levels, view batches, and manage inventory</p>
         </div>
-        <div className="flex gap-2">
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Stock Counting
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-6xl h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>Stock counting</DialogTitle>
-              <DialogDescription>Select products from the list of products and specify quantities.</DialogDescription>
-            </DialogHeader>
-            <div className="flex gap-6 h-full">
-              {/* Left Panel - Selected Items */}
-              <div className="flex-1 flex flex-col">
-                <h3 className="text-lg font-semibold mb-4">Selected Items</h3>
-                <div className="flex-1 border rounded-lg p-4 bg-muted/50">
-                  {selectedItems.length === 0 ? <div className="flex items-center justify-center h-full text-muted-foreground">
-                      <div className="text-center">
-                        <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>No items selected</p>
-                        <p className="text-sm">Select products from the catalog</p>
-                      </div>
-                    </div> : <div className="space-y-4">
-                      {selectedItems.map(item => <div key={item.id} className="bg-background border rounded-lg p-4">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <h4 className="font-medium">{item.name}</h4>
-                              <p className="text-sm text-muted-foreground">{item.sku}</p>
-                            </div>
-                            <Button variant="ghost" size="sm" onClick={() => removeSelectedItem(item.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div>
-                            <Label htmlFor={`qty-${item.id}`} className="text-sm">Quantity</Label>
-                            <Input id={`qty-${item.id}`} type="number" placeholder="0" value={item.quantity || ""} onChange={e => updateSelectedItem(item.id, 'quantity', parseInt(e.target.value) || 0)} />
-                          </div>
-                        </div>)}
-                    </div>}
-                </div>
-              </div>
-
-              {/* Right Panel - Product Catalog */}
-              <div className="flex-1 flex flex-col">
-                <h3 className="text-lg font-semibold mb-4">Products</h3>
-                <div className="mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search products..." value={productSearchTerm} onChange={e => setProductSearchTerm(e.target.value)} className="pl-10" />
-                  </div>
-                </div>
-                <div className="flex-1 border rounded-lg overflow-hidden">
-                  <div className="h-full overflow-y-auto p-4 space-y-2">
-                    {filteredProducts.map(product => <div key={product.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer" onClick={() => addSelectedItem(product)}>
-                        <div className="flex-1">
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-muted-foreground">{product.sku} • {product.category}</div>
-                          <div className="text-sm text-muted-foreground">Current Stock: {product.currentStock}</div>
-                        </div>
-                        <div className="text-right">
-                          {getStatusBadge(product.status)}
-                        </div>
-                      </div>)}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddItem} disabled={selectedItems.length === 0}>
-                Save Counting
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        <Dialog open={isAdjustmentDialogOpen} onOpenChange={setIsAdjustmentDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              <Plus className="mr-2 h-4 w-4" />
-              Stock Adjustment
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-6xl h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>Stock Adjustment</DialogTitle>
-              <DialogDescription>Select products and specify adjustment quantities.</DialogDescription>
-            </DialogHeader>
-            <div className="flex gap-6 h-full">
-              {/* Left Panel - Selected Items */}
-              <div className="flex-1 flex flex-col">
-                <h3 className="text-lg font-semibold mb-4">Selected Items</h3>
-                <div className="flex-1 border rounded-lg p-4 bg-muted/50">
-                  {adjustmentItems.length === 0 ? <div className="flex items-center justify-center h-full text-muted-foreground">
-                      <div className="text-center">
-                        <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>No items selected</p>
-                        <p className="text-sm">Select products from the catalog</p>
-                      </div>
-                    </div> : <div className="space-y-4">
-                      {adjustmentItems.map(item => <div key={item.id} className="bg-background border rounded-lg p-4">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <h4 className="font-medium">{item.name}</h4>
-                              <p className="text-sm text-muted-foreground">{item.sku}</p>
-                            </div>
-                            <Button variant="ghost" size="sm" onClick={() => removeAdjustmentItem(item.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div>
-                            <Label htmlFor={`adj-${item.id}`} className="text-sm">Adjustment Quantity</Label>
-                            <Input id={`adj-${item.id}`} type="number" placeholder="0" value={item.quantity || ""} onChange={e => updateAdjustmentItem(item.id, 'quantity', parseInt(e.target.value) || 0)} />
-                          </div>
-                        </div>)}
-                    </div>}
-                </div>
-              </div>
-
-              {/* Right Panel - Product Catalog */}
-              <div className="flex-1 flex flex-col">
-                <h3 className="text-lg font-semibold mb-4">Products</h3>
-                <div className="mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search products..." value={adjustmentSearchTerm} onChange={e => setAdjustmentSearchTerm(e.target.value)} className="pl-10" />
-                  </div>
-                </div>
-                <div className="flex-1 border rounded-lg overflow-hidden">
-                  <div className="h-full overflow-y-auto p-4 space-y-2">
-                    {filteredAdjustmentProducts.map(product => <div key={product.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer" onClick={() => addAdjustmentItem(product)}>
-                        <div className="flex-1">
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-muted-foreground">{product.sku} • {product.category}</div>
-                          <div className="text-sm text-muted-foreground">Current Stock: {product.currentStock}</div>
-                        </div>
-                        <div className="text-right">
-                          {getStatusBadge(product.status)}
-                        </div>
-                      </div>)}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAdjustmentDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAdjustment} disabled={adjustmentItems.length === 0}>
-                Save Adjustment
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
-    </div>
 
-
-    {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Items</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{inventory.length}</div>
+            <div className="text-2xl font-bold" data-testid="total-items-count">{inventoryStats.totalItems}</div>
             <p className="text-xs text-muted-foreground">
-              +2 from last week
+              Tracked products
             </p>
           </CardContent>
         </Card>
@@ -393,9 +218,11 @@ export default function Inventory() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(Math.round(totalValue * 100), company?.currency || 'tzs')}</div>
+            <div className="text-2xl font-bold" data-testid="total-value-amount">
+              {formatCurrency(inventoryStats.totalValue, company?.currency || 'tzs')}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +15% from last month
+              Current inventory value
             </p>
           </CardContent>
         </Card>
@@ -405,7 +232,7 @@ export default function Inventory() {
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{lowStockItems}</div>
+            <div className="text-2xl font-bold text-yellow-600" data-testid="low-stock-count">{inventoryStats.lowStockItems}</div>
             <p className="text-xs text-muted-foreground">
               Needs attention
             </p>
@@ -417,7 +244,7 @@ export default function Inventory() {
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{outOfStockItems}</div>
+            <div className="text-2xl font-bold text-red-600" data-testid="out-of-stock-count">{inventoryStats.outOfStockItems}</div>
             <p className="text-xs text-muted-foreground">
               Immediate action required
             </p>
@@ -427,28 +254,34 @@ export default function Inventory() {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Inventory Items</CardTitle>
-          <CardDescription>Manage your inventory with filters and search</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search by name or SKU..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search by product name or barcode..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+                data-testid="search-input"
+              />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Category" />
+              <SelectTrigger className="w-full md:w-48" data-testid="category-filter">
+                <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Status" />
+              <SelectTrigger className="w-full md:w-48" data-testid="status-filter">
+                <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
@@ -458,43 +291,250 @@ export default function Inventory() {
               </SelectContent>
             </Select>
           </div>
-
-          {/* Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Counting</TableHead>
-                  <TableHead>Adjustment</TableHead>
-                  <TableHead>Discrepancy</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredInventory.map(item => <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.category}</TableCell>
-                    <TableCell>{item.currentStock}</TableCell>
-                    <TableCell>{item.countingStock !== undefined ? item.countingStock : "-"}</TableCell>
-                    <TableCell>{item.adjustmentStock !== undefined ? item.adjustmentStock : "-"}</TableCell>
-                    <TableCell>-</TableCell>
-                    <TableCell>{getStatusBadge(item.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleDeleteItem(item.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>)}
-              </TableBody>
-            </Table>
-          </div>
         </CardContent>
       </Card>
-    </div>;
+
+      {/* Tabs for Inventory and Batches */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="inventory" data-testid="tab-inventory">Current Inventory</TabsTrigger>
+          <TabsTrigger value="batches" data-testid="tab-batches">Inventory Batches</TabsTrigger>
+        </TabsList>
+
+        {/* Current Inventory Tab */}
+        <TabsContent value="inventory">
+          <Card>
+            <CardHeader>
+              <CardTitle>Current Inventory</CardTitle>
+              <CardDescription>
+                View and manage current stock levels for all products
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Current Stock</TableHead>
+                      <TableHead>Threshold</TableHead>
+                      <TableHead>Unit Price</TableHead>
+                      <TableHead>Total Value</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Updated</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inventoryLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-4">
+                          Loading inventory...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredInventoryItems.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-4">
+                          No inventory items found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredInventoryItems.map((item) => (
+                        <TableRow key={item.inventoryId} data-testid={`inventory-row-${item.productId}`}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <div data-testid={`product-name-${item.productId}`}>{item.productName}</div>
+                              {item.productBarcode && (
+                                <div className="text-sm text-muted-foreground" data-testid={`product-barcode-${item.productId}`}>
+                                  {item.productBarcode}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`product-category-${item.productId}`}>
+                            {item.productCategory || "-"}
+                          </TableCell>
+                          <TableCell data-testid={`current-quantity-${item.productId}`}>
+                            {item.currentQuantity}
+                          </TableCell>
+                          <TableCell data-testid={`threshold-${item.productId}`}>
+                            {item.productLowStockThreshold}
+                          </TableCell>
+                          <TableCell data-testid={`unit-price-${item.productId}`}>
+                            {formatCurrency(item.productRetailPrice, company?.currency || 'tzs')}
+                          </TableCell>
+                          <TableCell data-testid={`total-value-${item.productId}`}>
+                            {formatCurrency(item.currentQuantity * item.productRetailPrice, company?.currency || 'tzs')}
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(item)}
+                          </TableCell>
+                          <TableCell data-testid={`last-updated-${item.productId}`}>
+                            {new Date(item.inventoryUpdatedAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAdjustInventory(item)}
+                              data-testid={`button-adjust-${item.productId}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Inventory Batches Tab */}
+        <TabsContent value="batches">
+          <Card>
+            <CardHeader>
+              <CardTitle>Inventory Batches</CardTitle>
+              <CardDescription>
+                View all inventory batches with purchase history and pricing details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Batch Number</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Buying Price</TableHead>
+                      <TableHead>Total Cost</TableHead>
+                      <TableHead>Retail Price</TableHead>
+                      <TableHead>Wholesale Price</TableHead>
+                      <TableHead>Created Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {batchesLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-4">
+                          Loading batches...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredInventoryBatches.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-4">
+                          No inventory batches found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredInventoryBatches.map((batch) => (
+                        <TableRow key={batch.batchId} data-testid={`batch-row-${batch.batchId}`}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <div data-testid={`batch-product-name-${batch.batchId}`}>{batch.productName}</div>
+                              {batch.productCategory && (
+                                <div className="text-sm text-muted-foreground">
+                                  {batch.productCategory}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm" data-testid={`batch-number-${batch.batchId}`}>
+                            {batch.batchNumber}
+                          </TableCell>
+                          <TableCell data-testid={`batch-quantity-${batch.batchId}`}>
+                            {batch.quantity}
+                          </TableCell>
+                          <TableCell data-testid={`batch-buying-price-${batch.batchId}`}>
+                            {formatCurrency(batch.buyingPrice, company?.currency || 'tzs')}
+                          </TableCell>
+                          <TableCell data-testid={`batch-total-cost-${batch.batchId}`}>
+                            {formatCurrency(batch.totalCost, company?.currency || 'tzs')}
+                          </TableCell>
+                          <TableCell data-testid={`batch-retail-price-${batch.batchId}`}>
+                            {formatCurrency(batch.retailPrice, company?.currency || 'tzs')}
+                            {batch.retailDiscount && batch.retailDiscount > 0 && (
+                              <span className="text-sm text-muted-foreground ml-1">
+                                (-{(batch.retailDiscount / 100).toFixed(1)}%)
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell data-testid={`batch-wholesale-price-${batch.batchId}`}>
+                            {formatCurrency(batch.wholesalerPrice, company?.currency || 'tzs')}
+                            {batch.wholesalerDiscount && batch.wholesalerDiscount > 0 && (
+                              <span className="text-sm text-muted-foreground ml-1">
+                                (-{(batch.wholesalerDiscount / 100).toFixed(1)}%)
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell data-testid={`batch-created-date-${batch.batchId}`}>
+                            {new Date(batch.createdAt).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Adjust Inventory Dialog */}
+      <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adjust Inventory Quantity</DialogTitle>
+            <DialogDescription>
+              Update the current stock quantity for {selectedInventoryItem?.productName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="current-quantity">Current Quantity</Label>
+              <Input
+                id="current-quantity"
+                type="number"
+                value={selectedInventoryItem?.currentQuantity || 0}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-quantity">New Quantity</Label>
+              <Input
+                id="new-quantity"
+                type="number"
+                value={newQuantity}
+                onChange={(e) => setNewQuantity(parseInt(e.target.value) || 0)}
+                min="0"
+                data-testid="input-new-quantity"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsAdjustDialogOpen(false)}
+                data-testid="button-cancel-adjust"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveAdjustment}
+                disabled={updateInventoryMutation.isPending}
+                data-testid="button-save-adjust"
+              >
+                {updateInventoryMutation.isPending ? "Updating..." : "Update Quantity"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

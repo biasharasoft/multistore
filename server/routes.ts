@@ -25,8 +25,14 @@ import {
   insertPurchaseSchema,
   insertCompanySchema,
   insertTeamMemberSchema,
-  insertTeamInvitationSchema
+  insertTeamInvitationSchema,
+  products,
+  productsCategories,
+  inventory,
+  inventoryBatch
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication Routes
@@ -1019,6 +1025,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting purchase:', error);
       res.status(400).json({ 
         message: error instanceof Error ? error.message : 'Failed to delete purchase' 
+      });
+    }
+  });
+
+  // Inventory Routes
+  
+  // Get inventory with product details
+  app.get('/api/inventory', async (req, res) => {
+    try {
+      const inventoryData = await db.select({
+        inventoryId: inventory.id,
+        productId: products.id,
+        productName: products.name,
+        productCategory: productsCategories.name,
+        productBarcode: products.barcode,
+        productImage: products.image,
+        productRetailPrice: products.retailPrice,
+        productRetailDiscount: products.retailDiscount,
+        productWholesalerPrice: products.wholesalerPrice,
+        productWholesalerDiscount: products.wholesalerDiscount,
+        productCost: products.cost,
+        productLowStockThreshold: products.lowStockThreshold,
+        productStatus: products.status,
+        currentQuantity: inventory.quantity,
+        inventoryUpdatedAt: inventory.updatedAt
+      })
+      .from(inventory)
+      .leftJoin(products, eq(inventory.productId, products.id))
+      .leftJoin(productsCategories, eq(products.categoryId, productsCategories.id))
+      .orderBy(products.name);
+      
+      res.json(inventoryData);
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch inventory' 
+      });
+    }
+  });
+
+  // Get inventory batches for a specific product
+  app.get('/api/inventory/batches/:productId', async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const batches = await storage.getInventoryBatchesByProductId(productId);
+      res.json(batches);
+    } catch (error) {
+      console.error('Error fetching inventory batches:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch inventory batches' 
+      });
+    }
+  });
+
+  // Get all inventory batches with product details
+  app.get('/api/inventory/batches', async (req, res) => {
+    try {
+      const batchesData = await db.select({
+        batchId: inventoryBatch.id,
+        productId: products.id,
+        productName: products.name,
+        productCategory: productsCategories.name,
+        batchNumber: inventoryBatch.batchNumber,
+        quantity: inventoryBatch.quantity,
+        totalCost: inventoryBatch.totalCost,
+        buyingPrice: inventoryBatch.buyingPrice,
+        retailPrice: inventoryBatch.retailPrice,
+        retailDiscount: inventoryBatch.retailDiscount,
+        wholesalerPrice: inventoryBatch.wholesalerPrice,
+        wholesalerDiscount: inventoryBatch.wholesalerDiscount,
+        createdAt: inventoryBatch.createdAt
+      })
+      .from(inventoryBatch)
+      .leftJoin(products, eq(inventoryBatch.productId, products.id))
+      .leftJoin(productsCategories, eq(products.categoryId, productsCategories.id))
+      .orderBy(sql`${inventoryBatch.createdAt} DESC`);
+      
+      res.json(batchesData);
+    } catch (error) {
+      console.error('Error fetching inventory batches:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch inventory batches' 
+      });
+    }
+  });
+
+  // Update inventory quantity
+  app.put('/api/inventory/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { quantity } = req.body;
+      
+      if (typeof quantity !== 'number' || quantity < 0) {
+        return res.status(400).json({ message: 'Invalid quantity provided' });
+      }
+      
+      const updatedInventory = await storage.updateInventory(id, { quantity });
+      res.json(updatedInventory);
+    } catch (error) {
+      console.error('Error updating inventory:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to update inventory' 
       });
     }
   });
