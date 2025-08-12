@@ -327,6 +327,7 @@ export type Product = typeof products.$inferSelect;
 export const inventory = pgTable("inventory", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   productId: varchar("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  storeId: varchar("store_id").references(() => stores.id, { onDelete: "cascade" }).notNull(),
   quantity: integer("quantity").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -335,9 +336,11 @@ export const inventory = pgTable("inventory", {
 // Inventory validation schemas
 export const insertInventorySchema = createInsertSchema(inventory).pick({
   productId: true,
+  storeId: true,
   quantity: true,
 }).extend({
   productId: z.string().min(1, "Product ID is required"),
+  storeId: z.string().min(1, "Store ID is required"),
   quantity: z.number().min(0, "Quantity must be non-negative"),
 });
 
@@ -348,6 +351,7 @@ export type Inventory = typeof inventory.$inferSelect;
 export const inventoryBatch = pgTable("inventory_batch", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   productId: varchar("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  storeId: varchar("store_id").references(() => stores.id, { onDelete: "cascade" }).notNull(),
   batchNumber: varchar("batch_number").notNull(),
   quantity: integer("quantity").notNull().default(0),
   totalCost: integer("total_cost").notNull().default(0), // Store as cents
@@ -363,6 +367,7 @@ export const inventoryBatch = pgTable("inventory_batch", {
 // Inventory Batch validation schemas
 export const insertInventoryBatchSchema = createInsertSchema(inventoryBatch).pick({
   productId: true,
+  storeId: true,
   batchNumber: true,
   quantity: true,
   totalCost: true,
@@ -373,6 +378,7 @@ export const insertInventoryBatchSchema = createInsertSchema(inventoryBatch).pic
   wholesalerDiscount: true,
 }).extend({
   productId: z.string().min(1, "Product ID is required"),
+  storeId: z.string().min(1, "Store ID is required"),
   batchNumber: z.string().min(1, "Batch number is required"),
   quantity: z.number().min(0, "Quantity must be non-negative"),
   totalCost: z.number().min(0, "Total cost must be non-negative"),

@@ -977,10 +977,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const purchaseData = insertPurchaseSchema.parse(req.body);
       
+      // Require store ID for purchase creation
+      const { storeId } = req.body;
+      if (!storeId) {
+        return res.status(400).json({ 
+          message: 'Store ID is required for purchase creation' 
+        });
+      }
+      
       // Keep purchaseDate as string for the createPurchase method
       const purchaseWithUserId = {
         ...purchaseData,
-        userId: req.user!.id
+        userId: req.user!.id,
+        storeId: storeId
       };
       
       const newPurchase = await storage.createPurchase(purchaseWithUserId);
@@ -1031,9 +1040,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Inventory Routes
   
-  // Get inventory with product details
+  // Get inventory with product details filtered by store
   app.get('/api/inventory', async (req, res) => {
     try {
+      const { storeId } = req.query;
+      
+      if (!storeId) {
+        return res.status(400).json({ 
+          message: 'Store ID is required' 
+        });
+      }
+      
       const inventoryData = await db.select({
         inventoryId: inventory.id,
         productId: products.id,
@@ -1049,11 +1066,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productLowStockThreshold: products.lowStockThreshold,
         productStatus: products.status,
         currentQuantity: inventory.quantity,
-        inventoryUpdatedAt: inventory.updatedAt
+        inventoryUpdatedAt: inventory.updatedAt,
+        storeId: inventory.storeId
       })
       .from(inventory)
       .leftJoin(products, eq(inventory.productId, products.id))
       .leftJoin(productsCategories, eq(products.categoryId, productsCategories.id))
+      .where(eq(inventory.storeId, storeId as string))
       .orderBy(products.name);
       
       res.json(inventoryData);
@@ -1079,9 +1098,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all inventory batches with product details
+  // Get all inventory batches with product details filtered by store
   app.get('/api/inventory/batches', async (req, res) => {
     try {
+      const { storeId } = req.query;
+      
+      if (!storeId) {
+        return res.status(400).json({ 
+          message: 'Store ID is required' 
+        });
+      }
+      
       const batchesData = await db.select({
         batchId: inventoryBatch.id,
         productId: products.id,
@@ -1095,11 +1122,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         retailDiscount: inventoryBatch.retailDiscount,
         wholesalerPrice: inventoryBatch.wholesalerPrice,
         wholesalerDiscount: inventoryBatch.wholesalerDiscount,
-        createdAt: inventoryBatch.createdAt
+        createdAt: inventoryBatch.createdAt,
+        storeId: inventoryBatch.storeId
       })
       .from(inventoryBatch)
       .leftJoin(products, eq(inventoryBatch.productId, products.id))
       .leftJoin(productsCategories, eq(products.categoryId, productsCategories.id))
+      .where(eq(inventoryBatch.storeId, storeId as string))
       .orderBy(sql`${inventoryBatch.createdAt} DESC`);
       
       res.json(batchesData);

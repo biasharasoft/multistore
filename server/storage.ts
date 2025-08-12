@@ -718,6 +718,7 @@ export class DatabaseStorage implements IStorage {
     // Create inventory batch record
     const batchData: InsertInventoryBatch = {
       productId: purchaseData.productId,
+      storeId: (purchaseData as any).storeId, // Add store ID to batch
       batchNumber: this.generateBatchNumber(),
       quantity: purchaseData.quantity,
       totalCost: purchaseData.totalCost,
@@ -730,8 +731,8 @@ export class DatabaseStorage implements IStorage {
 
     await this.createInventoryBatch(batchData);
 
-    // Update inventory to increment product quantity
-    await this.upsertInventory(purchaseData.productId, purchaseData.quantity);
+    // Update inventory to increment product quantity for the specific store
+    await this.upsertInventory(purchaseData.productId, (purchaseData as any).storeId, purchaseData.quantity);
     
     return purchase;
   }
@@ -825,11 +826,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Inventory operations
-  async getInventoryByProductId(productId: string): Promise<Inventory | undefined> {
+  async getInventoryByProductId(productId: string, storeId?: string): Promise<Inventory | undefined> {
+    let query = db.select().from(inventory).where(eq(inventory.productId, productId));
+    
+    if (storeId) {
+      query = query.where(eq(inventory.storeId, storeId));
+    }
+    
+    const [inventoryRecord] = await query;
+    return inventoryRecord || undefined;
+  }
+
+  async getInventoryByProductAndStore(productId: string, storeId: string): Promise<Inventory | undefined> {
     const [inventoryRecord] = await db
       .select()
       .from(inventory)
-      .where(eq(inventory.productId, productId));
+      .where(eq(inventory.productId, productId))
+      .where(eq(inventory.storeId, storeId));
     return inventoryRecord || undefined;
   }
 
@@ -877,8 +890,8 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async upsertInventory(productId: string, quantityToAdd: number): Promise<Inventory> {
-    const existingInventory = await this.getInventoryByProductId(productId);
+  async upsertInventory(productId: string, storeId: string, quantityToAdd: number): Promise<Inventory> {
+    const existingInventory = await this.getInventoryByProductAndStore(productId, storeId);
     
     if (existingInventory) {
       // Update existing inventory by adding the new quantity
@@ -886,9 +899,10 @@ export class DatabaseStorage implements IStorage {
         quantity: existingInventory.quantity + quantityToAdd
       });
     } else {
-      // Create new inventory record
+      // Create new inventory record for this store
       return await this.createInventory({
         productId,
+        storeId,
         quantity: quantityToAdd
       });
     }

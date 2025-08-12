@@ -9,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Package, TrendingUp, TrendingDown, AlertTriangle, Edit, Eye, Calendar } from "lucide-react";
+import { Plus, Search, Package, TrendingUp, TrendingDown, AlertTriangle, Edit, Eye, Calendar, Store } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/currency";
 import { apiRequest } from "@/lib/queryClient";
+import { useStore } from "@/hooks/useStore";
 
 interface InventoryItem {
   inventoryId: string;
@@ -51,6 +52,7 @@ interface InventoryBatch {
 export default function Inventory() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedStore } = useStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -59,14 +61,28 @@ export default function Inventory() {
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
   const [newQuantity, setNewQuantity] = useState<number>(0);
 
-  // Fetch inventory data
+  // Fetch inventory data (only if store is selected)
   const { data: inventoryItems = [], isLoading: inventoryLoading } = useQuery<InventoryItem[]>({
-    queryKey: ['/api/inventory'],
+    queryKey: ['/api/inventory', selectedStore],
+    queryFn: async () => {
+      if (!selectedStore) return [];
+      const response = await fetch(`/api/inventory?storeId=${selectedStore}`);
+      if (!response.ok) throw new Error('Failed to fetch inventory');
+      return response.json();
+    },
+    enabled: !!selectedStore,
   });
 
-  // Fetch inventory batches data
+  // Fetch inventory batches data (only if store is selected)
   const { data: inventoryBatches = [], isLoading: batchesLoading } = useQuery<InventoryBatch[]>({
-    queryKey: ['/api/inventory/batches'],
+    queryKey: ['/api/inventory/batches', selectedStore],
+    queryFn: async () => {
+      if (!selectedStore) return [];
+      const response = await fetch(`/api/inventory/batches?storeId=${selectedStore}`);
+      if (!response.ok) throw new Error('Failed to fetch inventory batches');
+      return response.json();
+    },
+    enabled: !!selectedStore,
   });
 
   // Fetch company data for currency
@@ -187,6 +203,33 @@ export default function Inventory() {
       quantity: newQuantity
     });
   };
+
+  // Show store selection warning if no store is selected
+  if (!selectedStore) {
+    return (
+      <div className="space-y-6" data-testid="inventory-page">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight" data-testid="page-title">Inventory Management</h1>
+            <p className="text-muted-foreground">Monitor stock levels, view batches, and manage inventory</p>
+          </div>
+        </div>
+
+        <Card className="p-8 text-center">
+          <div className="flex flex-col items-center space-y-4">
+            <Store className="h-12 w-12 text-muted-foreground" />
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Select a Store</h3>
+              <p className="text-muted-foreground max-w-md">
+                Please select a store from the sidebar to view and manage inventory. 
+                Inventory is tracked separately for each store.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="inventory-page">

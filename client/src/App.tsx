@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./lib/auth";
 import { queryClient } from "./lib/queryClient";
+import { StoreProvider } from "./hooks/useStore";
 import { MainLayout } from "./components/layout/MainLayout";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -67,11 +68,12 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
+    <StoreProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
           {/* Public Auth Routes */}
           <Route path="/auth/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/auth/register" element={<PublicRoute><Register /></PublicRoute>} />
@@ -101,9 +103,10 @@ const App = () => (
           
           {/* Fallback */}
           <Route path="*" element={<ProtectedRoute><MainLayout><NotFound /></MainLayout></ProtectedRoute>} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </StoreProvider>
   </QueryClientProvider>
 );
 

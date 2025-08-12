@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useStore } from "@/hooks/useStore";
 
 type Store = {
   id: string;
@@ -33,7 +34,7 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<string>("");
+  const { selectedStore, setSelectedStore } = useStore();
 
   // Fetch user's stores
   const { data: stores = [], isLoading: storesLoading } = useQuery<Store[]>({

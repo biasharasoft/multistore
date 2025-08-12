@@ -14,7 +14,8 @@ type Product = {
   barcode?: string;
   status: string;
 };
-import { Plus, Search, Filter, Download, Eye, Edit, Power, Package, X, ShoppingCart, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Search, Filter, Download, Eye, Edit, Power, Package, X, ShoppingCart, Calendar as CalendarIcon, Store } from "lucide-react";
+import { useStore } from "@/hooks/useStore";
 import {
   Popover,
   PopoverContent,
@@ -37,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 const Purchase = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedStore } = useStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -168,6 +170,15 @@ const Purchase = () => {
   });
 
   const handleAddPurchase = () => {
+    if (!selectedStore) {
+      toast({
+        title: "Store Required",
+        description: "Please select a store from the sidebar before creating a purchase.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!selectedProduct || quantity <= 0 || totalCost <= 0) {
       toast({
         title: "Missing Information",
@@ -176,7 +187,7 @@ const Purchase = () => {
       return;
     }
     
-    // Convert prices to cents for storage
+    // Convert prices to cents for storage and include store ID
     const purchaseData = {
       productId: selectedProduct,
       supplierId: selectedSupplier && selectedSupplier !== "none" ? selectedSupplier : undefined,
@@ -184,7 +195,8 @@ const Purchase = () => {
       totalCost: Math.round(totalCost * 100), // Convert to cents
       sellingPrice: Math.round(sellingPrice * 100), // Convert to cents
       purchaseDate,
-      notes: notes || undefined
+      notes: notes || undefined,
+      storeId: selectedStore
     };
     
     createPurchaseMutation.mutate(purchaseData);
@@ -211,6 +223,35 @@ const Purchase = () => {
     setIsEditDialogOpen(false);
     setEditingPurchase(null);
   };
+
+  // Show store selection warning if no store is selected
+  if (!selectedStore) {
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight">Purchase Management</h1>
+            <p className="text-muted-foreground">
+              Manage all product purchases and orders for your store
+            </p>
+          </div>
+        </div>
+
+        <Card className="p-8 text-center">
+          <div className="flex flex-col items-center space-y-4">
+            <Store className="h-12 w-12 text-muted-foreground" />
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Select a Store</h3>
+              <p className="text-muted-foreground max-w-md">
+                Please select a store from the sidebar to record purchases. 
+                All purchases and inventory records are tracked separately for each store.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
