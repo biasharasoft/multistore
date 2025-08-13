@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -157,12 +158,31 @@ const Stores = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  
+  // Fetch user auth data including role
+  const { data: authData } = useQuery({
+    queryKey: ['/api/auth/me'],
+    queryFn: async () => {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch user data');
+      return response.json();
+    },
+  });
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [isAddStoreOpen, setIsAddStoreOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [isEditStoreOpen, setIsEditStoreOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+
+  // Check if user can edit stores (Admin or Manager only)
+  const canEditStores = authData?.user?.role === 'Admin' || authData?.user?.role === 'Manager';
 
   // Fetch stores query
   const { data: stores = [], isLoading, error } = useQuery({
@@ -812,10 +832,12 @@ const Stores = () => {
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEditStore(store)} data-testid={`button-edit-store-${store.id}`}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Store
-                          </DropdownMenuItem>
+                          {canEditStores && (
+                            <DropdownMenuItem onClick={() => handleEditStore(store)} data-testid={`button-edit-store-${store.id}`}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Store
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -904,10 +926,12 @@ const Stores = () => {
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditStore(store)} data-testid={`button-edit-store-table-${store.id}`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit Store
-                            </DropdownMenuItem>
+                            {canEditStores && (
+                              <DropdownMenuItem onClick={() => handleEditStore(store)} data-testid={`button-edit-store-table-${store.id}`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Store
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

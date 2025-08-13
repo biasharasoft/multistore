@@ -215,7 +215,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/stores', authenticateToken, async (req, res) => {
     try {
       const userId = req.user!.id;
-      console.log(`[DEBUG] Fetching stores for user ID: ${userId}`);
       let stores = [];
       
       // Check if this user is a team member
@@ -225,11 +224,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(teamMembers.invitedUserId, userId))
         .limit(1);
       
-      console.log(`[DEBUG] Team member records found: ${teamMemberRecord.length}`);
-      
       if (teamMemberRecord.length > 0) {
         const member = teamMemberRecord[0];
-        console.log(`[DEBUG] User is team member with role: ${member.role}`);
         
         // For Admin role, get all stores from the organization owner AND their own stores
         if (member.role === 'Admin') {
@@ -243,25 +239,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
           
           stores = uniqueStores;
-          console.log(`[DEBUG] Admin accessing owner's stores: ${ownerStores.length}, own stores: ${ownStores.length}, total unique: ${stores.length}`);
         } else {
           // For other roles (Manager, Cashier, Staff), only get their assigned store
           if (member.storeId) {
             const assignedStore = await storage.getStoreById(member.storeId);
             if (assignedStore) {
               stores = [assignedStore];
-              console.log(`[DEBUG] Team member assigned to store: ${assignedStore.name}`);
             }
           }
         }
       } else {
         // This is an account owner, get all their stores
-        console.log(`[DEBUG] User is account owner, fetching all their stores`);
         stores = await storage.getStoresByUserId(userId);
-        console.log(`[DEBUG] Account owner stores found: ${stores.length}`);
       }
       
-      console.log(`[DEBUG] Final stores to return: ${stores.length}`);
       res.json(stores);
     } catch (error) {
       console.error('Error fetching stores:', error);
