@@ -36,18 +36,22 @@ interface ExpenseFormData {
 
 interface ExpenseFormProps {
   onSubmit: (data: ExpenseFormData) => void;
+  initialData?: Partial<ExpenseFormData & { amount: number }>;
+  isLoading?: boolean;
 }
 
-export function ExpenseForm({ onSubmit }: ExpenseFormProps) {
-  const [date, setDate] = useState<Date>(new Date());
-  const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [vendor, setVendor] = useState("");
-  const [status, setStatus] = useState<'paid' | 'pending' | 'overdue'>('pending');
-  const [storeId, setStoreId] = useState("");
+export function ExpenseForm({ onSubmit, initialData, isLoading = false }: ExpenseFormProps) {
+  const [date, setDate] = useState<Date>(
+    initialData?.expenseDate ? new Date(initialData.expenseDate) : new Date()
+  );
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
+  const [amount, setAmount] = useState(initialData?.amount?.toString() || "");
+  const [vendor, setVendor] = useState(initialData?.vendor || "");
+  const [status, setStatus] = useState<'paid' | 'pending' | 'overdue'>(initialData?.status || 'pending');
+  const [storeId, setStoreId] = useState(initialData?.storeId || "");
   const [receipt, setReceipt] = useState<File | null>(null);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(initialData?.notes || "");
 
   // Fetch active expense categories
   const { data: categories = [] } = useQuery<any[]>({
@@ -80,16 +84,18 @@ export function ExpenseForm({ onSubmit }: ExpenseFormProps) {
 
     onSubmit(formData);
     
-    // Reset form
-    setDate(new Date());
-    setDescription("");
-    setCategoryId("");
-    setAmount("");
-    setVendor("");
-    setStatus('pending');
-    setStoreId("");
-    setReceipt(null);
-    setNotes("");
+    // Only reset form if not editing (no initial data)
+    if (!initialData) {
+      setDate(new Date());
+      setDescription("");
+      setCategoryId("");
+      setAmount("");
+      setVendor("");
+      setStatus('pending');
+      setStoreId("");
+      setReceipt(null);
+      setNotes("");
+    }
   };
 
   const handleReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,8 +267,8 @@ export function ExpenseForm({ onSubmit }: ExpenseFormProps) {
 
       {/* Submit Button */}
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="submit" className="min-w-32">
-          Add Expense
+        <Button type="submit" className="min-w-32" disabled={isLoading}>
+          {isLoading ? "Saving..." : (initialData ? "Update Expense" : "Add Expense")}
         </Button>
       </div>
     </form>
