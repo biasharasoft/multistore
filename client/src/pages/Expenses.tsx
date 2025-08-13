@@ -83,6 +83,9 @@ export default function Expenses() {
     to: undefined,
   });
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isEditExpenseOpen, setIsEditExpenseOpen] = useState(false);
+  const [isViewExpenseOpen, setIsViewExpenseOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -132,6 +135,55 @@ export default function Expenses() {
       });
     },
   });
+
+  // Delete expense mutation
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (expenseId: string) => {
+      return await apiRequest(`/api/expenses/${expenseId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Expense has been deleted successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete expense",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update expense mutation
+  const updateExpenseMutation = useMutation({
+    mutationFn: async ({ expenseId, expenseData }: { expenseId: string; expenseData: any }) => {
+      return await apiRequest(`/api/expenses/${expenseId}`, {
+        method: 'PUT',
+        body: JSON.stringify(expenseData),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Expense has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      setIsEditExpenseOpen(false);
+      setSelectedExpense(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update expense",
+        variant: "destructive",
+      });
+    },
+  });
   
   const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -158,6 +210,31 @@ export default function Expenses() {
 
   const handleAddExpense = (expenseData: any) => {
     createExpenseMutation.mutate(expenseData);
+  };
+
+  const handleViewExpense = (expense: Expense) => {
+    setSelectedExpense(expense);
+    setIsViewExpenseOpen(true);
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setSelectedExpense(expense);
+    setIsEditExpenseOpen(true);
+  };
+
+  const handleUpdateExpense = (expenseData: any) => {
+    if (selectedExpense) {
+      updateExpenseMutation.mutate({
+        expenseId: selectedExpense.id,
+        expenseData
+      });
+    }
+  };
+
+  const handleDeleteExpense = (expense: Expense) => {
+    if (window.confirm(`Are you sure you want to delete the expense "${expense.description}"?`)) {
+      deleteExpenseMutation.mutate(expense.id);
+    }
   };
 
   const formatAmount = (amountInCents: number) => {
@@ -384,6 +461,7 @@ export default function Expenses() {
                         <Button 
                           variant="ghost" 
                           size="sm"
+                          onClick={() => handleViewExpense(expense)}
                           data-testid={`button-view-expense-${expense.id}`}
                         >
                           <Eye className="h-4 w-4" />
@@ -391,6 +469,7 @@ export default function Expenses() {
                         <Button 
                           variant="ghost" 
                           size="sm"
+                          onClick={() => handleEditExpense(expense)}
                           data-testid={`button-edit-expense-${expense.id}`}
                         >
                           <Edit className="h-4 w-4" />
@@ -398,6 +477,7 @@ export default function Expenses() {
                         <Button 
                           variant="ghost" 
                           size="sm"
+                          onClick={() => handleDeleteExpense(expense)}
                           data-testid={`button-delete-expense-${expense.id}`}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -411,6 +491,88 @@ export default function Expenses() {
           )}
         </CardContent>
       </Card>
+
+      {/* View Expense Dialog */}
+      <Dialog open={isViewExpenseOpen} onOpenChange={setIsViewExpenseOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Expense Details</DialogTitle>
+            <DialogDescription>
+              View expense information and details
+            </DialogDescription>
+          </DialogHeader>
+          {selectedExpense && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <p className="text-sm text-muted-foreground mt-1">{selectedExpense.description}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Amount</label>
+                  <p className="text-sm text-muted-foreground mt-1">{formatAmount(selectedExpense.amount)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Date</label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {format(new Date(selectedExpense.expenseDate), 'MMM dd, yyyy')}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Category</label>
+                  <p className="text-sm text-muted-foreground mt-1">{getCategoryName(selectedExpense.categoryId)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Vendor</label>
+                  <p className="text-sm text-muted-foreground mt-1">{selectedExpense.vendor}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Store</label>
+                  <p className="text-sm text-muted-foreground mt-1">{getStoreName(selectedExpense.storeId)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Status</label>
+                  <div className="mt-1">{getStatusBadge(selectedExpense.status)}</div>
+                </div>
+              </div>
+              {selectedExpense.notes && (
+                <div>
+                  <label className="text-sm font-medium">Notes</label>
+                  <p className="text-sm text-muted-foreground mt-1">{selectedExpense.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Expense Dialog */}
+      <Dialog open={isEditExpenseOpen} onOpenChange={setIsEditExpenseOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>
+              Update expense information and details
+            </DialogDescription>
+          </DialogHeader>
+          {selectedExpense && (
+            <ExpenseForm
+              onSubmit={handleUpdateExpense}
+              initialData={{
+                description: selectedExpense.description,
+                amount: selectedExpense.amount / 100, // Convert cents to dollars for form
+                expenseDate: selectedExpense.expenseDate,
+                categoryId: selectedExpense.categoryId,
+                vendor: selectedExpense.vendor,
+                storeId: selectedExpense.storeId,
+                status: selectedExpense.status,
+                notes: selectedExpense.notes || '',
+              }}
+              isLoading={updateExpenseMutation.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
