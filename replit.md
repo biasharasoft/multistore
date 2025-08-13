@@ -61,6 +61,7 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
   - Non-admin users cannot change store selection - it's locked to their assigned store
   - Store selector shows "(Assigned)" label for team members' designated stores
   - Fixed team member Edit button SelectItem empty string validation error
+  - Updated team member management permissions: Only Admin and Manager roles can update/delete team members
 - **2025-08-10**: Created inventory management database schema
   - Added inventory table with id, product_id, and quantity columns
   - Added inventory_batch table with id, product_id, batch_number, quantity, total_cost, buying_price, retail_price, retail_discount, wholesaler_price, and wholesaler_discount columns

@@ -1663,12 +1663,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (teamMemberRecord.length > 0) {
         const member = teamMemberRecord[0];
-        if (member.role === 'Admin') {
-          // Admin can update team members from their organization
+        if (member.role === 'Admin' || member.role === 'Manager') {
+          // Admin and Manager can update team members from their organization
           organizationOwnerId = member.userId;
         } else {
           // Other roles cannot update team members
-          return res.status(403).json({ message: 'Access denied. Only Admin and organization owners can update team members.' });
+          return res.status(403).json({ message: 'Access denied. Only Admin, Manager, and organization owners can update team members.' });
         }
       }
       
@@ -1704,12 +1704,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (teamMemberRecord.length > 0) {
         const member = teamMemberRecord[0];
-        if (member.role === 'Admin') {
-          // Admin can delete team members from their organization
+        if (member.role === 'Admin' || member.role === 'Manager') {
+          // Admin and Manager can delete team members from their organization
           organizationOwnerId = member.userId;
         } else {
           // Other roles cannot delete team members
-          return res.status(403).json({ message: 'Access denied. Only Admin and organization owners can remove team members.' });
+          return res.status(403).json({ message: 'Access denied. Only Admin, Manager, and organization owners can remove team members.' });
         }
       }
       
