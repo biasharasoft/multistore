@@ -527,6 +527,76 @@ export const insertPurchaseSchema = createInsertSchema(purchases).pick({
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type Purchase = typeof purchases.$inferSelect;
 
+// Sales table
+export const sales = pgTable("sales", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
+  customerId: varchar("customer_id").references(() => customers.id, { onDelete: "set null" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  totalAmount: integer("total_amount").notNull().default(0), // Store as cents
+  discountAmount: integer("discount_amount").default(0), // Store as cents
+  taxAmount: integer("tax_amount").default(0), // Store as cents
+  paymentMethod: varchar("payment_method").default("cash"), // cash, card, mobile, etc.
+  status: varchar("status").notNull().default("completed"), // completed, pending, cancelled
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Sale Items table
+export const saleItems = pgTable("sale_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  saleId: varchar("sale_id").notNull().references(() => sales.id, { onDelete: "cascade" }),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  quantity: integer("quantity").notNull(),
+  price: integer("price").notNull(), // Store as cents - price at time of sale
+  discount: integer("discount").default(0), // Store as percentage * 100
+  totalAmount: integer("total_amount").notNull(), // Store as cents
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Sales validation schemas
+export const insertSaleSchema = createInsertSchema(sales).pick({
+  storeId: true,
+  customerId: true,
+  totalAmount: true,
+  discountAmount: true,
+  taxAmount: true,
+  paymentMethod: true,
+  status: true,
+  notes: true,
+}).extend({
+  storeId: z.string().min(1, "Store is required"),
+  customerId: z.string().optional(),
+  totalAmount: z.number().min(0, "Total amount must be non-negative"),
+  discountAmount: z.number().min(0, "Discount amount must be non-negative").optional(),
+  taxAmount: z.number().min(0, "Tax amount must be non-negative").optional(),
+  paymentMethod: z.enum(["cash", "card", "mobile", "bank_transfer"]).optional(),
+  status: z.enum(["completed", "pending", "cancelled"]).optional(),
+  notes: z.string().optional(),
+});
+
+export const insertSaleItemSchema = createInsertSchema(saleItems).pick({
+  saleId: true,
+  productId: true,
+  quantity: true,
+  price: true,
+  discount: true,
+  totalAmount: true,
+}).extend({
+  saleId: z.string().min(1, "Sale ID is required"),
+  productId: z.string().min(1, "Product is required"),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  price: z.number().min(0, "Price must be non-negative"),
+  discount: z.number().min(0).max(10000, "Discount must be valid").optional(),
+  totalAmount: z.number().min(0, "Total amount must be non-negative"),
+});
+
+export type InsertSale = z.infer<typeof insertSaleSchema>;
+export type Sale = typeof sales.$inferSelect;
+export type InsertSaleItem = z.infer<typeof insertSaleItemSchema>;
+export type SaleItem = typeof saleItems.$inferSelect;
+
 // Appearance themes settings table
 export const appearanceThemesSettings = pgTable("appearance_themes_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -578,7 +648,7 @@ export const teamMembers = pgTable("team_members", {
   name: varchar("name").notNull(), // Full name
   role: varchar("role").notNull(), // Admin, Manager, Cashier, Staff
   storeId: varchar("store_id").references(() => stores.id, { onDelete: "cascade" }), // Store they have access to
-  storeName: varchar("store_name").notNull(), // Store name for easier querying
+  storeName: varchar("store_name"), // Store name for easier querying
   status: varchar("status").notNull().default("pending"), // pending, active, inactive
   invitedAt: timestamp("invited_at").defaultNow(),
   acceptedAt: timestamp("accepted_at"),

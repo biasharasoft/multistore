@@ -1,4 +1,4 @@
-import { users, companies, stores, regions, productsCategories, expensesCategories, expenses, products, suppliers, customers, purchases, inventory, inventoryBatch, appearanceThemesSettings, industriesCategories, teamMembers, teamInvitations, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Expense, type InsertExpense, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type Inventory, type InsertInventory, type InventoryBatch, type InsertInventoryBatch, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory, type TeamMember, type InsertTeamMember, type TeamInvitation, type InsertTeamInvitation } from "@shared/schema";
+import { users, companies, stores, regions, productsCategories, expensesCategories, expenses, products, suppliers, customers, purchases, inventory, inventoryBatch, sales, saleItems, appearanceThemesSettings, industriesCategories, teamMembers, teamInvitations, type User, type InsertUser, type Company, type InsertCompany, type Store, type InsertStore, type Region, type InsertRegion, type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Expense, type InsertExpense, type Product, type InsertProduct, type Supplier, type InsertSupplier, type Customer, type InsertCustomer, type Purchase, type InsertPurchase, type Inventory, type InsertInventory, type InventoryBatch, type InsertInventoryBatch, type Sale, type InsertSale, type SaleItem, type InsertSaleItem, type AppearanceThemesSettings, type InsertAppearanceThemesSettings, type IndustryCategory, type InsertIndustryCategory, type TeamMember, type InsertTeamMember, type TeamInvitation, type InsertTeamInvitation } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 import crypto from "crypto";
@@ -99,7 +99,7 @@ export interface IStorage {
   createInventory(inventory: InsertInventory): Promise<Inventory>;
   updateInventory(id: string, updates: Partial<InsertInventory>): Promise<Inventory>;
   deleteInventory(id: string): Promise<void>;
-  upsertInventory(productId: string, quantity: number): Promise<Inventory>;
+  upsertInventory(productId: string, storeId: string, quantity: number): Promise<Inventory>;
   
   // Inventory Batch operations
   getInventoryBatchesByProductId(productId: string): Promise<InventoryBatch[]>;
@@ -136,6 +136,22 @@ export interface IStorage {
   createTeamInvitation(invitation: InsertTeamInvitation & { organizationOwnerId: string; token: string; expiresAt: Date }): Promise<TeamInvitation>;
   updateTeamInvitation(id: string, updates: Partial<InsertTeamInvitation>): Promise<TeamInvitation>;
   deleteTeamInvitation(id: string): Promise<void>;
+  
+  // Sales operations
+  getAllSales(): Promise<Sale[]>;
+  getSalesByUserId(userId: string): Promise<Sale[]>;
+  getSalesByStoreId(storeId: string): Promise<Sale[]>;
+  getSaleById(id: string): Promise<Sale | undefined>;
+  createSale(sale: InsertSale & { userId: string }): Promise<Sale>;
+  updateSale(id: string, userId: string, updates: Partial<InsertSale>): Promise<Sale>;
+  deleteSale(id: string, userId: string): Promise<void>;
+  
+  // Sale Items operations
+  getSaleItemsBySaleId(saleId: string): Promise<SaleItem[]>;
+  getSaleItemById(id: string): Promise<SaleItem | undefined>;
+  createSaleItem(saleItem: InsertSaleItem): Promise<SaleItem>;
+  updateSaleItem(id: string, updates: Partial<InsertSaleItem>): Promise<SaleItem>;
+  deleteSaleItem(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -827,13 +843,16 @@ export class DatabaseStorage implements IStorage {
 
   // Inventory operations
   async getInventoryByProductId(productId: string, storeId?: string): Promise<Inventory | undefined> {
-    let query = db.select().from(inventory).where(eq(inventory.productId, productId));
+    const conditions = [eq(inventory.productId, productId)];
     
     if (storeId) {
-      query = query.where(eq(inventory.storeId, storeId));
+      conditions.push(eq(inventory.storeId, storeId));
     }
     
-    const [inventoryRecord] = await query;
+    const [inventoryRecord] = await db
+      .select()
+      .from(inventory)
+      .where(and(...conditions));
     return inventoryRecord || undefined;
   }
 
@@ -841,8 +860,7 @@ export class DatabaseStorage implements IStorage {
     const [inventoryRecord] = await db
       .select()
       .from(inventory)
-      .where(eq(inventory.productId, productId))
-      .where(eq(inventory.storeId, storeId));
+      .where(and(eq(inventory.productId, productId), eq(inventory.storeId, storeId)));
     return inventoryRecord || undefined;
   }
 
@@ -1046,7 +1064,7 @@ export class DatabaseStorage implements IStorage {
   async createTeamMember(memberData: InsertTeamMember & { userId: string }): Promise<TeamMember> {
     const [member] = await db
       .insert(teamMembers)
-      .values(memberData)
+      .values([memberData])
       .returning();
     return member;
   }
@@ -1242,6 +1260,128 @@ export class DatabaseStorage implements IStorage {
     
     if (result.length === 0) {
       throw new Error("Expense not found");
+    }
+  }
+
+  // Sales operations
+  async getAllSales(): Promise<Sale[]> {
+    const allSales = await db
+      .select()
+      .from(sales)
+      .orderBy(sql`${sales.createdAt} DESC`);
+    return allSales;
+  }
+
+  async getSalesByUserId(userId: string): Promise<Sale[]> {
+    const userSales = await db
+      .select()
+      .from(sales)
+      .where(eq(sales.userId, userId))
+      .orderBy(sql`${sales.createdAt} DESC`);
+    return userSales;
+  }
+
+  async getSalesByStoreId(storeId: string): Promise<Sale[]> {
+    const storeSales = await db
+      .select()
+      .from(sales)
+      .where(eq(sales.storeId, storeId))
+      .orderBy(sql`${sales.createdAt} DESC`);
+    return storeSales;
+  }
+
+  async getSaleById(id: string): Promise<Sale | undefined> {
+    const [sale] = await db
+      .select()
+      .from(sales)
+      .where(eq(sales.id, id));
+    return sale || undefined;
+  }
+
+  async createSale(saleData: InsertSale & { userId: string }): Promise<Sale> {
+    const [sale] = await db
+      .insert(sales)
+      .values([saleData])
+      .returning();
+    return sale;
+  }
+
+  async updateSale(id: string, userId: string, updates: Partial<InsertSale>): Promise<Sale> {
+    const [sale] = await db
+      .update(sales)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(sales.id, id), eq(sales.userId, userId)))
+      .returning();
+    
+    if (!sale) {
+      throw new Error("Sale not found");
+    }
+    
+    return sale;
+  }
+
+  async deleteSale(id: string, userId: string): Promise<void> {
+    const result = await db
+      .delete(sales)
+      .where(and(eq(sales.id, id), eq(sales.userId, userId)))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Sale not found");
+    }
+  }
+
+  // Sale Items operations
+  async getSaleItemsBySaleId(saleId: string): Promise<SaleItem[]> {
+    const items = await db
+      .select()
+      .from(saleItems)
+      .where(eq(saleItems.saleId, saleId))
+      .orderBy(sql`${saleItems.createdAt} DESC`);
+    return items;
+  }
+
+  async getSaleItemById(id: string): Promise<SaleItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(saleItems)
+      .where(eq(saleItems.id, id));
+    return item || undefined;
+  }
+
+  async createSaleItem(saleItemData: InsertSaleItem): Promise<SaleItem> {
+    const [item] = await db
+      .insert(saleItems)
+      .values([saleItemData])
+      .returning();
+    return item;
+  }
+
+  async updateSaleItem(id: string, updates: Partial<InsertSaleItem>): Promise<SaleItem> {
+    const [item] = await db
+      .update(saleItems)
+      .set(updates)
+      .where(eq(saleItems.id, id))
+      .returning();
+    
+    if (!item) {
+      throw new Error("Sale item not found");
+    }
+    
+    return item;
+  }
+
+  async deleteSaleItem(id: string): Promise<void> {
+    const result = await db
+      .delete(saleItems)
+      .where(eq(saleItems.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error("Sale item not found");
     }
   }
 }

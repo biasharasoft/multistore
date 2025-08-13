@@ -30,6 +30,9 @@ import {
   productsCategories,
   inventory,
   inventoryBatch,
+  sales,
+  saleItems,
+  expenses,
   users,
   teamMembers,
   teamInvitations,
@@ -1805,21 +1808,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Calculate total potential revenue from purchases (using selling price)
+      // Calculate total revenue from actual sales
       const revenueQuery = await db
         .select({ 
-          total: sql<number>`sum(${purchases.quantity} * ${purchases.sellingPrice})` 
+          total: sql<number>`sum(${sales.totalAmount})` 
         })
-        .from(purchases)
-        .where(eq(purchases.userId, userId));
+        .from(sales)
+        .where(eq(sales.userId, userId));
       
       const totalRevenue = revenueQuery[0]?.total || 0;
 
-      // Count total purchases as sales proxy
+      // Count total completed sales
       const salesQuery = await db
         .select({ count: sql<number>`count(*)` })
-        .from(purchases)
-        .where(eq(purchases.userId, userId));
+        .from(sales)
+        .where(and(eq(sales.userId, userId), eq(sales.status, 'completed')));
       
       const totalSales = salesQuery[0]?.count || 0;
 
@@ -1910,33 +1913,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
       }
 
-      // Calculate current period revenue (using potential selling price from purchases)
+      // Calculate current period revenue from actual sales
       const currentRevenueQuery = await db
         .select({ 
-          total: sql<number>`sum(${purchases.quantity} * ${purchases.sellingPrice})` 
+          total: sql<number>`sum(${sales.totalAmount})` 
         })
-        .from(purchases)
+        .from(sales)
         .where(
           and(
-            eq(purchases.userId, userId),
-            gte(purchases.createdAt, startDate),
-            lt(purchases.createdAt, endDate)
+            eq(sales.userId, userId),
+            eq(sales.status, 'completed'),
+            gte(sales.createdAt, startDate),
+            lt(sales.createdAt, endDate)
           )
         );
 
       const currentRevenue = currentRevenueQuery[0]?.total || 0;
 
-      // Calculate current period expenses
+      // Calculate current period expenses from actual expenses table
       const currentExpensesQuery = await db
         .select({ 
-          total: sql<number>`sum(${purchases.totalCost})` 
+          total: sql<number>`sum(${expenses.amount})` 
         })
-        .from(purchases)
+        .from(expenses)
         .where(
           and(
-            eq(purchases.userId, userId),
-            gte(purchases.createdAt, startDate),
-            lt(purchases.createdAt, endDate)
+            eq(expenses.userId, userId),
+            gte(expenses.createdAt, startDate),
+            lt(expenses.createdAt, endDate)
           )
         );
 
@@ -1945,27 +1949,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate previous period cash flow for comparison
       const prevRevenueQuery = await db
         .select({ 
-          total: sql<number>`sum(${purchases.quantity} * ${purchases.sellingPrice})` 
+          total: sql<number>`sum(${sales.totalAmount})` 
         })
-        .from(purchases)
+        .from(sales)
         .where(
           and(
-            eq(purchases.userId, userId),
-            gte(purchases.createdAt, prevStartDate),
-            lt(purchases.createdAt, prevEndDate)
+            eq(sales.userId, userId),
+            eq(sales.status, 'completed'),
+            gte(sales.createdAt, prevStartDate),
+            lt(sales.createdAt, prevEndDate)
           )
         );
 
       const prevExpensesQuery = await db
         .select({ 
-          total: sql<number>`sum(${purchases.totalCost})` 
+          total: sql<number>`sum(${expenses.amount})` 
         })
-        .from(purchases)
+        .from(expenses)
         .where(
           and(
-            eq(purchases.userId, userId),
-            gte(purchases.createdAt, prevStartDate),
-            lt(purchases.createdAt, prevEndDate)
+            eq(expenses.userId, userId),
+            gte(expenses.createdAt, prevStartDate),
+            lt(expenses.createdAt, prevEndDate)
           )
         );
 
@@ -2055,7 +2060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
 
-      // Get top products by purchase quantity this month
+      // Get top products by sales quantity this month
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -2063,20 +2068,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const topProducts = await db
         .select({
           productName: products.name,
-          totalQuantity: sql<number>`sum(${purchases.quantity})`,
-          totalRevenue: sql<number>`sum(${purchases.quantity} * ${purchases.sellingPrice})`
+          totalQuantity: sql<number>`sum(${saleItems.quantity})`,
+          totalRevenue: sql<number>`sum(${saleItems.totalAmount})`
         })
-        .from(purchases)
-        .innerJoin(products, eq(purchases.productId, products.id))
+        .from(saleItems)
+        .innerJoin(sales, eq(saleItems.saleId, sales.id))
+        .innerJoin(products, eq(saleItems.productId, products.id))
         .where(
           and(
-            eq(purchases.userId, userId),
-            gte(purchases.createdAt, startOfMonth),
-            lt(purchases.createdAt, endOfMonth)
+            eq(sales.userId, userId),
+            eq(sales.status, 'completed'),
+            gte(sales.createdAt, startOfMonth),
+            lt(sales.createdAt, endOfMonth)
           )
         )
         .groupBy(products.id, products.name)
-        .orderBy(sql`sum(${purchases.quantity}) desc`)
+        .orderBy(sql`sum(${saleItems.quantity}) desc`)
         .limit(5);
 
       const maxSales = topProducts[0]?.totalQuantity || 1;
