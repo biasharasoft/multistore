@@ -29,7 +29,8 @@ import {
   products,
   productsCategories,
   inventory,
-  inventoryBatch
+  inventoryBatch,
+  users
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
@@ -1459,68 +1460,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Send team member invitation
+  // Create team member with account
   app.post('/api/team-members/invite', authenticateToken, async (req, res) => {
     try {
       const userId = req.user.id;
       const { email, name, role, storeName } = insertTeamMemberSchema.parse(req.body);
       
-      // Check if member already exists
+      // Check if user already exists (check directly in database)
+      const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (existingUser.length > 0) {
+        return res.status(400).json({ 
+          message: 'A user with this email already exists' 
+        });
+      }
+
+      // Check if team member already exists
       const existingMember = await storage.getTeamMemberByEmail(email, userId);
       if (existingMember) {
         return res.status(400).json({ 
           message: 'A team member with this email already exists' 
         });
       }
+
+      // Generate temporary password
+      const tempPassword = Math.random().toString(36).slice(-8);
       
-      // Generate unique invitation token
-      const invitationToken = randomUUID();
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      // Split name into first and last name
+      const nameParts = name.trim().split(' ');
+      const firstName = nameParts[0] || name;
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Create user account
+      const newUser = await authService.createUserAccount({
+        email,
+        firstName,
+        lastName,
+        password: tempPassword
+      });
 
       // Find the store ID if storeName is provided
       let storeId = null;
-      if (storeName) {
+      if (storeName && storeName !== 'none') {
         const userStores = await storage.getStoresByUserId(userId);
         const store = userStores.find(s => s.name === storeName);
         storeId = store?.id || null;
       }
 
-      // Create team invitation record
-      await storage.createTeamInvitation({
-        organizationOwnerId: userId,
-        email,
-        name,
-        role,
-        storeId,
-        storeName,
-        token: invitationToken,
-        expiresAt
-      });
-
-      // Create team member record in pending status
+      // Create team member record with active status
       const teamMember = await storage.createTeamMember({
         userId,
         email,
         name,
         role,
         storeId,
-        storeName,
-        status: 'pending'
+        storeName: (storeName === 'none') ? undefined : storeName,
+        status: 'active',
+        invitedUserId: newUser.id // Link to the actual user account
       });
 
-      // In a real application, you would send an invitation email here
-      // For now, we'll just log the invitation details
-      console.log(`Team invitation sent to ${email} with token: ${invitationToken}`);
+      console.log(`Team member account created for ${email} with temporary password: ${tempPassword}`);
 
       res.json({ 
-        message: 'Invitation sent successfully',
+        message: 'Team member account created successfully',
         teamMember,
-        invitationToken // In production, don't return this
+        loginCredentials: {
+          email,
+          tempPassword
+        }
       });
     } catch (error) {
-      console.error('Error sending team invitation:', error);
+      console.error('Error creating team member account:', error);
       res.status(400).json({ 
-        message: error instanceof Error ? error.message : 'Failed to send invitation' 
+        message: error instanceof Error ? error.message : 'Failed to create team member account' 
       });
     }
   });

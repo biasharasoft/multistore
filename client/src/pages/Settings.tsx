@@ -425,23 +425,33 @@ export default function Settings() {
         body: JSON.stringify(data),
       });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       setInviteEmail("");
       setInviteName("");
       setInviteRole("viewer");
       setInviteStore("");
       setIsAddMemberOpen(false);
-      toast({
-        title: "Success",
-        description: "Team member invitation sent successfully.",
-      });
+      
+      // Show login credentials to the team owner
+      if (data?.loginCredentials) {
+        toast({
+          title: "Team Member Created Successfully",
+          description: `Login credentials: Email: ${data.loginCredentials.email}, Password: ${data.loginCredentials.tempPassword}`,
+          duration: 10000, // Show for 10 seconds
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Team member account created successfully.",
+        });
+      }
     },
     onError: (error) => {
-      console.error('Error sending invitation:', error);
+      console.error('Error creating team member:', error);
       toast({
         title: "Error",
-        description: "Failed to send invitation. Please try again.",
+        description: "Failed to create team member account. Please try again.",
         variant: "destructive",
       });
     },
@@ -1145,7 +1155,7 @@ export default function Settings() {
                     <DialogHeader>
                       <DialogTitle>Add New Team Member</DialogTitle>
                       <DialogDescription>
-                        Invite a new team member to join your organization. They will receive an invitation email.
+                        Create a new team member account. They will be able to login immediately with generated credentials.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -1208,9 +1218,9 @@ export default function Settings() {
                       <Button 
                         onClick={handleSendInvitation}
                         disabled={sendInvitationMutation.isPending}
-                        data-testid="button-send-invitation"
+                        data-testid="button-add-member"
                       >
-                        {sendInvitationMutation.isPending ? "Sending..." : "Send Invitation"}
+                        {sendInvitationMutation.isPending ? "Creating..." : "Add Member"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>

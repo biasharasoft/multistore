@@ -325,6 +325,36 @@ export class AuthService {
 
     return { message: 'New OTP sent to your email' };
   }
+
+  // Create user account directly (for team member creation)
+  async createUserAccount(userData: { email: string; firstName: string; lastName: string; password: string }) {
+    const { email, firstName, lastName, password } = userData;
+    
+    // Check if user already exists
+    const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (existingUser.length > 0) {
+      throw new Error('User already exists with this email');
+    }
+
+    // Hash password and create user
+    const hashedPassword = await this.hashPassword(password);
+    
+    const [newUser] = await db.insert(users).values({
+      email,
+      firstName,
+      lastName,
+      password: hashedPassword,
+      isEmailVerified: true, // Auto-verify team member accounts
+    }).returning();
+
+    return {
+      id: newUser.id,
+      email: newUser.email,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      isEmailVerified: newUser.isEmailVerified,
+    };
+  }
 }
 
 export const authService = new AuthService();
