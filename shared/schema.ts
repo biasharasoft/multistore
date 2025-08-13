@@ -278,9 +278,9 @@ export const products = pgTable("products", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
   cost: decimal("cost", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal  
   wholesalerPrice: decimal("wholesaler_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
-  wholesalerDiscount: decimal("wholesaler_discount", { precision: 5, scale: 2 }).default("0.00"), // Store as percentage
+  wholesalerDiscount: decimal("wholesaler_discount", { precision: 10, scale: 2 }).default("0.00"), // Store as percentage
   retailPrice: decimal("retail_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
-  retailDiscount: decimal("retail_discount", { precision: 5, scale: 2 }).default("0.00"), // Store as percentage
+  retailDiscount: decimal("retail_discount", { precision: 10, scale: 2 }).default("0.00"), // Store as percentage
   stock: integer("stock").notNull().default(0),
   lowStockThreshold: integer("low_stock_threshold").notNull().default(5),
   description: text("description"),
