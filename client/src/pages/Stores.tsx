@@ -235,10 +235,21 @@ const Stores = () => {
   });
 
   const onSubmit = (data: StoreFormData) => {
+    // Transform empty strings to undefined for optional fields
+    const transformedData = {
+      ...data,
+      regionId: data.regionId && data.regionId.trim() !== "" ? data.regionId : undefined,
+      manager: data.manager && data.manager.trim() !== "" ? data.manager : undefined,
+      phone: data.phone && data.phone.trim() !== "" ? data.phone : undefined,
+      email: data.email && data.email.trim() !== "" ? data.email : undefined,
+      openTime: data.openTime && data.openTime.trim() !== "" ? data.openTime : undefined,
+      closeTime: data.closeTime && data.closeTime.trim() !== "" ? data.closeTime : undefined,
+    };
+    
     if (editingStore) {
-      updateStoreMutation.mutate({ ...data, id: editingStore.id });
+      updateStoreMutation.mutate({ ...transformedData, id: editingStore.id });
     } else {
-      createStoreMutation.mutate(data);
+      createStoreMutation.mutate(transformedData);
     }
   };
 
