@@ -1527,7 +1527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Unauthorized' });
       }
       
-      let teamMembers = [];
+      let teamMembersResult = [];
       
       // Check if the current user is a team member
       const teamMemberRecord = await db
@@ -1541,17 +1541,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // If user is Admin, show all team members from their organization
         if (member.role === 'Admin') {
-          teamMembers = await storage.getTeamMembersByUserId(member.userId);
+          teamMembersResult = await storage.getTeamMembersByUserId(member.userId);
         } else {
           // For other roles (Manager, Staff, Cashier), show no team members
-          teamMembers = [];
+          teamMembersResult = [];
         }
       } else {
         // This is an organization owner, show team members they invited
-        teamMembers = await storage.getTeamMembersByUserId(userId);
+        teamMembersResult = await storage.getTeamMembersByUserId(userId);
       }
       
-      res.json(teamMembers);
+      res.json(teamMembersResult);
     } catch (error) {
       console.error('Error fetching team members:', error);
       res.status(500).json({ 
