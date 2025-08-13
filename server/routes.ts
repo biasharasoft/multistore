@@ -760,15 +760,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Raw request body:', req.body);
       
-      // All conversions are already handled on frontend (dollars to cents, percentages to storage format)
+      // Handle decimal values properly for the new decimal schema
       const productData = {
         ...req.body,
-        price: parseInt(req.body.price) || 0,
-        cost: parseInt(req.body.cost) || 0,
-        wholesalerPrice: parseInt(req.body.wholesalerPrice) || 0,
-        wholesalerDiscount: parseInt(req.body.wholesalerDiscount) || 0,
-        retailPrice: parseInt(req.body.retailPrice) || 0,
-        retailDiscount: parseInt(req.body.retailDiscount) || 0,
+        price: parseFloat(req.body.price) || 0,
+        cost: parseFloat(req.body.cost) || 0,
+        wholesalerPrice: parseFloat(req.body.wholesalerPrice) || 0,
+        wholesalerDiscount: parseFloat(req.body.wholesalerDiscount) || 0,
+        retailPrice: parseFloat(req.body.retailPrice) || 0,
+        retailDiscount: parseFloat(req.body.retailDiscount) || 0,
       };
       
       console.log('Processed product data:', productData);
@@ -792,14 +792,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
-      // All conversions are already handled on frontend, just ensure proper integer types
+      // Handle decimal values properly for the new decimal schema
       const updates = { ...req.body };
-      if (updates.price !== undefined) updates.price = parseInt(updates.price) || 0;
-      if (updates.cost !== undefined) updates.cost = parseInt(updates.cost) || 0;
-      if (updates.wholesalerPrice !== undefined) updates.wholesalerPrice = parseInt(updates.wholesalerPrice) || 0;
-      if (updates.retailPrice !== undefined) updates.retailPrice = parseInt(updates.retailPrice) || 0;
-      if (updates.wholesalerDiscount !== undefined) updates.wholesalerDiscount = parseInt(updates.wholesalerDiscount) || 0;
-      if (updates.retailDiscount !== undefined) updates.retailDiscount = parseInt(updates.retailDiscount) || 0;
+      if (updates.price !== undefined) updates.price = parseFloat(updates.price) || 0;
+      if (updates.cost !== undefined) updates.cost = parseFloat(updates.cost) || 0;
+      if (updates.wholesalerPrice !== undefined) updates.wholesalerPrice = parseFloat(updates.wholesalerPrice) || 0;
+      if (updates.retailPrice !== undefined) updates.retailPrice = parseFloat(updates.retailPrice) || 0;
+      if (updates.wholesalerDiscount !== undefined) updates.wholesalerDiscount = parseFloat(updates.wholesalerDiscount) || 0;
+      if (updates.retailDiscount !== undefined) updates.retailDiscount = parseFloat(updates.retailDiscount) || 0;
       
       const validatedUpdates = insertProductSchema.partial().parse(updates);
       const updatedProduct = await storage.updateProduct(id, validatedUpdates);
