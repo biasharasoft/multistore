@@ -350,10 +350,7 @@ export default function Products() {
         <CardHeader className="pb-3">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <CardTitle 
-                className="text-lg line-clamp-1 cursor-pointer hover:text-primary transition-colors"
-                onClick={() => navigate(`/products/${product.id}`)}
-              >
+              <CardTitle className="text-lg line-clamp-1">
                 {product.name}
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
@@ -422,10 +419,7 @@ export default function Products() {
     return (
       <div className="grid grid-cols-8 gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors items-center">
         <div className="col-span-2">
-          <p 
-            className="font-medium cursor-pointer hover:text-primary transition-colors"
-            onClick={() => navigate(`/products/${product.id}`)}
-          >
+          <p className="font-medium">
             {product.name}
           </p>
           <p className="text-sm text-muted-foreground">{product.barcode || "No barcode"}</p>
