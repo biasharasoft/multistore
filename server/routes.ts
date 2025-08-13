@@ -2008,34 +2008,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
 
-      // Get products with low inventory (assuming min stock threshold of 10)
-      const lowStockProducts = await db
+      // Get all products and their inventory totals
+      const productsWithInventory = await db
         .select({
           productId: products.id,
           productName: products.name,
           sku: products.sku,
-          storeId: products.storeId,
-          storeName: stores.name,
-          totalQuantity: sql<number>`coalesce(sum(${inventory.quantity}), 0)`,
-          minStock: sql<number>`10` // Default min stock threshold
+          storeId: products.storeId
         })
         .from(products)
-        .leftJoin(inventory, eq(products.id, inventory.productId))
-        .innerJoin(stores, eq(products.storeId, stores.id))
-        .where(inArray(products.storeId, accessibleStoreIds))
-        .groupBy(products.id, products.name, products.sku, products.storeId, stores.name)
-        .having(sql`coalesce(sum(${inventory.quantity}), 0) < 15`) // Low stock threshold
-        .orderBy(sql`coalesce(sum(${inventory.quantity}), 0)`)
-        .limit(10);
+        .where(inArray(products.storeId, accessibleStoreIds));
 
-      const alerts = lowStockProducts.map(product => ({
-        product: product.productName,
-        sku: product.sku || 'N/A',
-        stock: product.totalQuantity,
-        minStock: product.minStock,
-        status: product.totalQuantity < 5 ? 'critical' : 'low',
-        store: product.storeName
-      }));
+      // Get store names separately
+      const storeRecords = await db
+        .select({
+          id: stores.id,
+          name: stores.name
+        })
+        .from(stores)
+        .where(inArray(stores.id, accessibleStoreIds));
+
+      const storeMap = new Map(storeRecords.map(store => [store.id, store.name]));
+
+      // Get inventory totals for each product
+      const inventoryTotals = await db
+        .select({
+          productId: inventory.productId,
+          totalQuantity: sql<number>`sum(${inventory.quantity})`
+        })
+        .from(inventory)
+        .groupBy(inventory.productId);
+
+      const inventoryMap = new Map(inventoryTotals.map(inv => [inv.productId, inv.totalQuantity || 0]));
+
+      // Create alerts for low stock products
+      const alerts = productsWithInventory
+        .map(product => {
+          const stock = inventoryMap.get(product.productId) || 0;
+          const minStock = 10; // Default threshold
+          const storeName = storeMap.get(product.storeId) || 'Unknown Store';
+          
+          return {
+            product: product.productName,
+            sku: product.sku || 'N/A',
+            stock,
+            minStock,
+            status: stock < 5 ? 'critical' : 'low',
+            store: storeName
+          };
+        })
+        .filter(alert => alert.stock < 15) // Only show low stock items
+        .sort((a, b) => a.stock - b.stock) // Sort by lowest stock first
+        .slice(0, 10); // Limit to 10 results
 
       res.json(alerts);
     } catch (error) {
