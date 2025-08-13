@@ -719,6 +719,14 @@ export class DatabaseStorage implements IStorage {
       insertData.purchaseDate = new Date(insertData.purchaseDate);
     }
     
+    // Convert decimal values to cents (integers) for database storage
+    if (typeof insertData.totalCost === 'number') {
+      insertData.totalCost = Math.round(insertData.totalCost * 100);
+    }
+    if (typeof insertData.sellingPrice === 'number') {
+      insertData.sellingPrice = Math.round(insertData.sellingPrice * 100);
+    }
+    
     // Create the purchase record
     const [purchase] = await db
       .insert(purchases)
@@ -737,12 +745,12 @@ export class DatabaseStorage implements IStorage {
       storeId: (purchaseData as any).storeId, // Add store ID to batch
       batchNumber: this.generateBatchNumber(),
       quantity: purchaseData.quantity,
-      totalCost: purchaseData.totalCost,
-      buyingPrice: Math.round(purchaseData.totalCost / purchaseData.quantity), // total cost divided by quantity
-      retailPrice: purchaseData.sellingPrice, // use the selling price from the purchase
-      retailDiscount: product.retailDiscount || 0, // copy from product
-      wholesalerPrice: product.wholesalerPrice || 0, // copy from product
-      wholesalerDiscount: product.wholesalerDiscount || 0, // copy from product
+      totalCost: Math.round(purchaseData.totalCost * 100), // convert to cents
+      buyingPrice: Math.round((purchaseData.totalCost / purchaseData.quantity) * 100), // convert to cents
+      retailPrice: Math.round(purchaseData.sellingPrice * 100), // convert to cents
+      retailDiscount: typeof product.retailDiscount === 'number' ? Math.round(product.retailDiscount * 100) : (typeof product.retailDiscount === 'string' ? Math.round(parseFloat(product.retailDiscount) * 100) : 0),
+      wholesalerPrice: typeof product.wholesalerPrice === 'number' ? Math.round(product.wholesalerPrice * 100) : (typeof product.wholesalerPrice === 'string' ? Math.round(parseFloat(product.wholesalerPrice) * 100) : 0),
+      wholesalerDiscount: typeof product.wholesalerDiscount === 'number' ? Math.round(product.wholesalerDiscount * 100) : (typeof product.wholesalerDiscount === 'string' ? Math.round(parseFloat(product.wholesalerDiscount) * 100) : 0),
     };
 
     await this.createInventoryBatch(batchData);
