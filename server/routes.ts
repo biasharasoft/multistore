@@ -1651,7 +1651,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = req.body;
       
-      const updatedMember = await storage.updateTeamMember(id, userId, updates);
+      // Check if current user can update team members
+      let organizationOwnerId = userId; // Default to current user
+      
+      // Check if the current user is a team member with Admin role
+      const teamMemberRecord = await db
+        .select()
+        .from(teamMembers)
+        .where(eq(teamMembers.invitedUserId, userId))
+        .limit(1);
+      
+      if (teamMemberRecord.length > 0) {
+        const member = teamMemberRecord[0];
+        if (member.role === 'Admin') {
+          // Admin can update team members from their organization
+          organizationOwnerId = member.userId;
+        } else {
+          // Other roles cannot update team members
+          return res.status(403).json({ message: 'Access denied. Only Admin and organization owners can update team members.' });
+        }
+      }
+      
+      const updatedMember = await storage.updateTeamMember(id, organizationOwnerId, updates);
       res.json(updatedMember);
     } catch (error) {
       console.error('Error updating team member:', error);
@@ -1664,10 +1685,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete team member
   app.delete('/api/team-members/:id', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      
       const { id } = req.params;
       
-      await storage.deleteTeamMember(id, userId);
+      // Check if current user can delete team members
+      let organizationOwnerId = userId; // Default to current user
+      
+      // Check if the current user is a team member with Admin role
+      const teamMemberRecord = await db
+        .select()
+        .from(teamMembers)
+        .where(eq(teamMembers.invitedUserId, userId))
+        .limit(1);
+      
+      if (teamMemberRecord.length > 0) {
+        const member = teamMemberRecord[0];
+        if (member.role === 'Admin') {
+          // Admin can delete team members from their organization
+          organizationOwnerId = member.userId;
+        } else {
+          // Other roles cannot delete team members
+          return res.status(403).json({ message: 'Access denied. Only Admin and organization owners can remove team members.' });
+        }
+      }
+      
+      await storage.deleteTeamMember(id, organizationOwnerId);
       res.json({ message: 'Team member removed successfully' });
     } catch (error) {
       console.error('Error deleting team member:', error);
