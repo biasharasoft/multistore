@@ -236,12 +236,12 @@ export default function ProductDetail() {
     updateProductMutation.mutate({
       name: editForm.name,
       categoryId: categories.find(c => c.name === editForm.category)?.id,
-      price: Math.round((parseFloat(editForm.price) || 0) * 100), // Convert dollars to cents
-      cost: Math.round((parseFloat(editForm.cost) || 0) * 100),
-      wholesalerPrice: Math.round((parseFloat(editForm.wholesalerPrice) || 0) * 100),
-      wholesalerDiscount: Math.round((parseFloat(editForm.wholesalerDiscount) || 0) * 100), // Convert percentage to storage format
-      retailPrice: Math.round((parseFloat(editForm.retailPrice) || 0) * 100),
-      retailDiscount: Math.round((parseFloat(editForm.retailDiscount) || 0) * 100),
+      price: parseFloat(editForm.price) || 0, // Store as decimal
+      cost: parseFloat(editForm.cost) || 0, // Store as decimal
+      wholesalerPrice: parseFloat(editForm.wholesalerPrice) || 0, // Store as decimal
+      wholesalerDiscount: parseFloat(editForm.wholesalerDiscount) || 0, // Store as percentage decimal
+      retailPrice: parseFloat(editForm.retailPrice) || 0, // Store as decimal
+      retailDiscount: parseFloat(editForm.retailDiscount) || 0, // Store as percentage decimal
       stock: parseInt(editForm.stock) || 0,
       lowStockThreshold: parseInt(editForm.lowStockThreshold) || 5,
       description: editForm.description,
