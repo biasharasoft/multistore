@@ -505,7 +505,7 @@ export class DatabaseStorage implements IStorage {
   async createProduct(productData: InsertProduct): Promise<Product> {
     const [product] = await db
       .insert(products)
-      .values(productData)
+      .values([productData])
       .returning();
     return product;
   }
@@ -719,14 +719,6 @@ export class DatabaseStorage implements IStorage {
       insertData.purchaseDate = new Date(insertData.purchaseDate);
     }
     
-    // Convert decimal values to cents (integers) for database storage
-    if (typeof insertData.totalCost === 'number') {
-      insertData.totalCost = Math.round(insertData.totalCost * 100);
-    }
-    if (typeof insertData.sellingPrice === 'number') {
-      insertData.sellingPrice = Math.round(insertData.sellingPrice * 100);
-    }
-    
     // Create the purchase record
     const [purchase] = await db
       .insert(purchases)
@@ -739,18 +731,18 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Product not found");
     }
 
-    // Create inventory batch record
-    const batchData: InsertInventoryBatch = {
+    // Create inventory batch record - convert numbers to strings for decimal columns
+    const batchData: any = {
       productId: purchaseData.productId,
       storeId: (purchaseData as any).storeId, // Add store ID to batch
       batchNumber: this.generateBatchNumber(),
       quantity: purchaseData.quantity,
-      totalCost: Math.round(purchaseData.totalCost * 100), // convert to cents
-      buyingPrice: Math.round((purchaseData.totalCost / purchaseData.quantity) * 100), // convert to cents
-      retailPrice: Math.round(purchaseData.sellingPrice * 100), // convert to cents
-      retailDiscount: typeof product.retailDiscount === 'number' ? Math.round(product.retailDiscount * 100) : (typeof product.retailDiscount === 'string' ? Math.round(parseFloat(product.retailDiscount) * 100) : 0),
-      wholesalerPrice: typeof product.wholesalerPrice === 'number' ? Math.round(product.wholesalerPrice * 100) : (typeof product.wholesalerPrice === 'string' ? Math.round(parseFloat(product.wholesalerPrice) * 100) : 0),
-      wholesalerDiscount: typeof product.wholesalerDiscount === 'number' ? Math.round(product.wholesalerDiscount * 100) : (typeof product.wholesalerDiscount === 'string' ? Math.round(parseFloat(product.wholesalerDiscount) * 100) : 0),
+      totalCost: purchaseData.totalCost.toString(), // convert to string for decimal column
+      buyingPrice: (purchaseData.totalCost / purchaseData.quantity).toString(), // convert to string for decimal column
+      retailPrice: purchaseData.sellingPrice.toString(), // convert to string for decimal column
+      retailDiscount: typeof product.retailDiscount === 'number' ? product.retailDiscount.toString() : (typeof product.retailDiscount === 'string' ? product.retailDiscount : "0.00"),
+      wholesalerPrice: typeof product.wholesalerPrice === 'number' ? product.wholesalerPrice.toString() : (typeof product.wholesalerPrice === 'string' ? product.wholesalerPrice : "0.00"),
+      wholesalerDiscount: typeof product.wholesalerDiscount === 'number' ? product.wholesalerDiscount.toString() : (typeof product.wholesalerDiscount === 'string' ? product.wholesalerDiscount : "0.00"),
     };
 
     await this.createInventoryBatch(batchData);

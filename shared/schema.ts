@@ -354,12 +354,12 @@ export const inventoryBatch = pgTable("inventory_batch", {
   storeId: varchar("store_id").references(() => stores.id, { onDelete: "cascade" }).notNull(),
   batchNumber: varchar("batch_number").notNull(),
   quantity: integer("quantity").notNull().default(0),
-  totalCost: integer("total_cost").notNull().default(0), // Store as cents
-  buyingPrice: integer("buying_price").notNull().default(0), // Store as cents
-  retailPrice: integer("retail_price").notNull().default(0), // Store as cents
-  retailDiscount: integer("retail_discount").default(0), // Store as percentage * 100
-  wholesalerPrice: integer("wholesaler_price").notNull().default(0), // Store as cents
-  wholesalerDiscount: integer("wholesaler_discount").default(0), // Store as percentage * 100
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  buyingPrice: decimal("buying_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  retailPrice: decimal("retail_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  retailDiscount: decimal("retail_discount", { precision: 5, scale: 2 }).default("0.00"), // Store as percentage
+  wholesalerPrice: decimal("wholesaler_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  wholesalerDiscount: decimal("wholesaler_discount", { precision: 5, scale: 2 }).default("0.00"), // Store as percentage
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -497,8 +497,8 @@ export const purchases = pgTable("purchases", {
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   supplierId: varchar("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
   quantity: integer("quantity").notNull(),
-  totalCost: integer("total_cost").notNull(), // Store as cents
-  sellingPrice: integer("selling_price").notNull(), // Store as cents
+  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
   purchaseDate: timestamp("purchase_date").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),

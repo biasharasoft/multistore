@@ -51,6 +51,13 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
 - All components and pages preserved from original project
 
 ## Recent Changes
+- **2025-08-13**: Fixed purchase creation decimal/integer conversion bug
+  - Updated purchases table schema to use decimal columns instead of integer for totalCost and sellingPrice
+  - Updated inventoryBatch table schema to use decimal columns for all price fields
+  - Removed cents conversion logic from storage layer to store exact user-entered values
+  - Applied database migration to change column types from integer to decimal
+  - Fixed PostgreSQL "value out of range for type integer" error that occurred when large decimal values were multiplied by 100
+  - System now stores decimal values exactly as users enter them (e.g., 800000 stays as 800000, not converted to 80000000)
 - **2025-08-10**: Implemented role-based store access control system
   - Modified /api/auth/me endpoint to include user role and assigned store information
   - Updated /api/stores endpoint to filter accessible stores based on user role:
