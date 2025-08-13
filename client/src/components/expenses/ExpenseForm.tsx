@@ -46,7 +46,9 @@ export function ExpenseForm({ onSubmit, initialData, isLoading = false }: Expens
   );
   const [description, setDescription] = useState(initialData?.description || "");
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || "");
-  const [amount, setAmount] = useState(initialData?.amount?.toString() || "");
+  const [amount, setAmount] = useState(
+    initialData?.amount ? (initialData.amount / 100).toString() : ""
+  );
   const [vendor, setVendor] = useState(initialData?.vendor || "");
   const [status, setStatus] = useState<'paid' | 'pending' | 'overdue'>(initialData?.status || 'pending');
   const [storeId, setStoreId] = useState(initialData?.storeId || "");
@@ -74,7 +76,7 @@ export function ExpenseForm({ onSubmit, initialData, isLoading = false }: Expens
       expenseDate: format(date, 'yyyy-MM-dd'),
       description,
       categoryId,
-      amount: Math.round(parseFloat(amount) * 100), // Convert to cents
+      amount: Math.round(parseFloat(amount) * 100), // Backend expects cents
       vendor,
       status,
       storeId,
