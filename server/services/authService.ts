@@ -327,8 +327,8 @@ export class AuthService {
   }
 
   // Create user account directly (for team member creation)
-  async createUserAccount(userData: { email: string; firstName: string; lastName: string; password: string }) {
-    const { email, firstName, lastName, password } = userData;
+  async createUserAccount(userData: { email: string; firstName: string; lastName: string; phone?: string | null; password: string }) {
+    const { email, firstName, lastName, phone, password } = userData;
     
     // Check if user already exists
     const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -343,6 +343,7 @@ export class AuthService {
       email,
       firstName,
       lastName,
+      phone,
       password: hashedPassword,
       isEmailVerified: true, // Auto-verify team member accounts
     }).returning();

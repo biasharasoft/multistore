@@ -613,6 +613,8 @@ export const insertTeamMemberSchema = createInsertSchema(teamMembers).pick({
 }).extend({
   email: z.string().email("Valid email is required"),
   name: z.string().min(1, "Name is required"),
+  phone: z.string().optional(),
+  password: z.string().optional(),
   role: z.enum(["Admin", "Manager", "Cashier", "Staff"]),
   storeId: z.string().optional(),
   storeName: z.string().min(1, "Store is required"),

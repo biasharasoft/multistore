@@ -60,6 +60,8 @@ export default function Settings() {
   // Team member invitation states
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
+  const [invitePhone, setInvitePhone] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
   const [inviteRole, setInviteRole] = useState("Staff");
   const [inviteStore, setInviteStore] = useState("");
 
@@ -429,6 +431,8 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       setInviteEmail("");
       setInviteName("");
+      setInvitePhone("");
+      setInvitePassword("");
       setInviteRole("Staff");
       setInviteStore("");
       setIsAddMemberOpen(false);
@@ -496,6 +500,8 @@ export default function Settings() {
     sendInvitationMutation.mutate({
       email: inviteEmail,
       name: inviteName,
+      phone: invitePhone,
+      password: invitePassword,
       role: inviteRole,
       storeName: inviteStore || undefined,
     });
@@ -1178,6 +1184,28 @@ export default function Settings() {
                           onChange={(e) => setInviteEmail(e.target.value)}
                           placeholder="Enter email address"
                           data-testid="input-member-email"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="memberPhone">Phone Number</Label>
+                        <Input
+                          id="memberPhone"
+                          type="tel"
+                          value={invitePhone}
+                          onChange={(e) => setInvitePhone(e.target.value)}
+                          placeholder="Enter phone number"
+                          data-testid="input-member-phone"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="memberPassword">Password</Label>
+                        <Input
+                          id="memberPassword"
+                          type="password"
+                          value={invitePassword}
+                          onChange={(e) => setInvitePassword(e.target.value)}
+                          placeholder="Enter password"
+                          data-testid="input-member-password"
                         />
                       </div>
                       <div className="space-y-2">

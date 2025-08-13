@@ -1464,7 +1464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/team-members/invite', authenticateToken, async (req, res) => {
     try {
       const userId = req.user.id;
-      const { email, name, role, storeName } = insertTeamMemberSchema.parse(req.body);
+      const { email, name, phone, password, role, storeName } = insertTeamMemberSchema.parse(req.body);
       
       // Check if user already exists (check directly in database)
       const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -1482,8 +1482,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Generate temporary password
-      const tempPassword = Math.random().toString(36).slice(-8);
+      // Use provided password or generate temporary password
+      const userPassword = password || Math.random().toString(36).slice(-8);
       
       // Split name into first and last name
       const nameParts = name.trim().split(' ');
@@ -1495,7 +1495,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         firstName,
         lastName,
-        password: tempPassword
+        phone,
+        password: userPassword
       });
 
       // Find the store ID if storeName is provided
@@ -1513,19 +1514,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name,
         role,
         storeId,
-        storeName: (storeName === 'none') ? undefined : storeName,
+        storeName: (storeName === 'none') ? null : storeName,
         status: 'active',
         invitedUserId: newUser.id // Link to the actual user account
       });
 
-      console.log(`Team member account created for ${email} with temporary password: ${tempPassword}`);
+      console.log(`Team member account created for ${email} with temporary password: ${userPassword}`);
 
       res.json({ 
         message: 'Team member account created successfully',
         teamMember,
         loginCredentials: {
           email,
-          tempPassword
+          tempPassword: userPassword
         }
       });
     } catch (error) {
