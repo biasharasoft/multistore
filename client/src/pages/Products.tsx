@@ -343,7 +343,7 @@ export default function Products() {
 
   const ProductCard = ({ product }: { product: Product }) => {
     const stockStatus = getStockStatus(product);
-    const margin = ((product.price - product.cost) / product.price * 100).toFixed(1);
+    const margin = ((product.retailPrice - product.cost) / product.retailPrice * 100).toFixed(1);
 
     return (
       <Card className="group hover:shadow-md transition-all duration-200">
@@ -369,9 +369,9 @@ export default function Products() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-muted-foreground">Price</p>
+              <p className="text-muted-foreground">Retail Price</p>
               <p className="font-semibold text-primary">
-                {formatCurrency(Math.round(product.price * 100), company?.currency || 'tzs')}
+                {formatCurrency(Math.round(product.retailPrice * 100), company?.currency || 'tzs')}
               </p>
             </div>
             <div>
@@ -417,7 +417,7 @@ export default function Products() {
 
   const ProductListRow = ({ product }: { product: Product }) => {
     const stockStatus = getStockStatus(product);
-    const margin = ((product.price - product.cost) / product.price * 100).toFixed(1);
+    const margin = ((product.retailPrice - product.cost) / product.retailPrice * 100).toFixed(1);
 
     return (
       <div className="grid grid-cols-8 gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors items-center">
@@ -434,7 +434,7 @@ export default function Products() {
           <Badge variant="outline">{product.category}</Badge>
         </div>
         <div className="text-center font-semibold text-primary">
-          {formatCurrency(Math.round(product.price * 100), company?.currency || 'tzs')}
+          {formatCurrency(Math.round(product.retailPrice * 100), company?.currency || 'tzs')}
         </div>
         <div className="text-center">
           {formatCurrency(Math.round(product.cost * 100), company?.currency || 'tzs')}
@@ -825,7 +825,7 @@ export default function Products() {
             <div className="grid grid-cols-8 gap-4 text-sm font-medium text-muted-foreground">
               <div className="col-span-2">Product</div>
               <div className="text-center">Category</div>
-              <div className="text-center">Price</div>
+              <div className="text-center">Retail Price</div>
               <div className="text-center">Cost</div>
               <div className="text-center">Stock</div>
               <div className="text-center">Margin</div>
