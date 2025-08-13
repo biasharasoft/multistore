@@ -52,8 +52,11 @@ interface Product {
 }
 
 // Helper function to convert database product to frontend product
-const convertDbProductToFrontend = (dbProduct: DbProduct, categories: ProductsCategory[]): Product => {
+const convertDbProductToFrontend = (dbProduct: DbProduct, categories: ProductsCategory[], inventoryData: any[]): Product => {
   const category = categories.find(c => c.id === dbProduct.categoryId);
+  const inventoryItem = inventoryData.find(inv => inv.productId === dbProduct.id);
+  const actualStock = inventoryItem ? inventoryItem.currentQuantity : 0;
+  
   return {
     id: dbProduct.id,
     name: dbProduct.name,
@@ -65,7 +68,7 @@ const convertDbProductToFrontend = (dbProduct: DbProduct, categories: ProductsCa
     wholesalerDiscount: (dbProduct.wholesalerDiscount || 0) / 100, // Convert to percentage
     retailPrice: (dbProduct.retailPrice || 0) / 100,
     retailDiscount: (dbProduct.retailDiscount || 0) / 100,
-    stock: dbProduct.stock,
+    stock: actualStock, // Use inventory stock instead of product stock
     lowStockThreshold: dbProduct.lowStockThreshold,
     description: dbProduct.description || "",
     barcode: dbProduct.barcode || "",
@@ -80,6 +83,14 @@ export default function Products() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  // Get selected store for inventory data
+  const { data: stores = [] } = useQuery<any[]>({
+    queryKey: ['/api/stores'],
+  });
+  
+  // Use first store as default for inventory lookup
+  const selectedStoreId = stores.length > 0 ? stores[0].id : null;
+
   // API Queries
   const { data: dbProducts = [], isLoading: isLoadingProducts } = useQuery<DbProduct[]>({
     queryKey: ['/api/products'],
@@ -89,13 +100,20 @@ export default function Products() {
     queryKey: ['/api/products-categories'],
   });
 
+  // Fetch inventory data for the selected store
+  const { data: inventoryData = [] } = useQuery<any[]>({
+    queryKey: ['/api/inventory', selectedStoreId],
+    queryFn: () => selectedStoreId ? fetch(`/api/inventory?storeId=${selectedStoreId}`).then(res => res.json()) : [],
+    enabled: !!selectedStoreId,
+  });
+
   // Fetch company information to get currency setting
   const { data: company } = useQuery<any>({
     queryKey: ['/api/company'],
   });
   
   // Convert database products to frontend format
-  const products = dbProducts.map(dbProduct => convertDbProductToFrontend(dbProduct, categories));
+  const products = dbProducts.map(dbProduct => convertDbProductToFrontend(dbProduct, categories, inventoryData));
   
   // State
   const [searchTerm, setSearchTerm] = useState("");
