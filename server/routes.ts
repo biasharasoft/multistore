@@ -1449,7 +1449,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get team members for authenticated user
   app.get('/api/team-members', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
       const teamMembers = await storage.getTeamMembersByUserId(userId);
       res.json(teamMembers);
     } catch (error) {
@@ -1463,7 +1466,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create team member with account
   app.post('/api/team-members/invite', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
       const { email, name, phone, password, role, storeName } = insertTeamMemberSchema.parse(req.body);
       
       // Check if user already exists (check directly in database)
@@ -1495,7 +1501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         firstName,
         lastName,
-        phone,
+        phone: phone || undefined,
         password: userPassword
       });
 
@@ -1514,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name,
         role,
         storeId,
-        storeName: (storeName === 'none') ? null : storeName,
+        storeName: (storeName === 'none') ? undefined : storeName,
         status: 'active',
         invitedUserId: newUser.id // Link to the actual user account
       });
@@ -1540,7 +1546,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update team member
   app.put('/api/team-members/:id', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      
       const { id } = req.params;
       const updates = req.body;
       

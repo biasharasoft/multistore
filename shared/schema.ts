@@ -617,7 +617,7 @@ export const insertTeamMemberSchema = createInsertSchema(teamMembers).pick({
   password: z.string().optional(),
   role: z.enum(["Admin", "Manager", "Cashier", "Staff"]),
   storeId: z.string().optional(),
-  storeName: z.string().min(1, "Store is required"),
+  storeName: z.string().optional(),
 });
 
 // Team invitation validation schemas

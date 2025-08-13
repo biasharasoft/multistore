@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
-import { type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Company, type InsertCompany } from "@shared/schema";
+import { type ProductsCategory, type InsertProductsCategory, type ExpensesCategory, type InsertExpensesCategory, type Company, type InsertCompany, type TeamMember } from "@shared/schema";
 import type { UploadResult } from "@uppy/core";
 import { getSupportedCurrencies } from "@/lib/currency";
 import { 
@@ -64,6 +64,15 @@ export default function Settings() {
   const [invitePassword, setInvitePassword] = useState("");
   const [inviteRole, setInviteRole] = useState("Staff");
   const [inviteStore, setInviteStore] = useState("");
+
+  // Team member editing states
+  const [isEditMemberOpen, setIsEditMemberOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [editMemberEmail, setEditMemberEmail] = useState("");
+  const [editMemberName, setEditMemberName] = useState("");
+  const [editMemberPhone, setEditMemberPhone] = useState("");
+  const [editMemberRole, setEditMemberRole] = useState("Staff");
+  const [editMemberStore, setEditMemberStore] = useState("");
 
   // Fetch products categories
   const { data: productCategories = [], isLoading: isLoadingProductCategories } = useQuery<ProductsCategory[]>({
@@ -461,6 +470,63 @@ export default function Settings() {
     },
   });
 
+  // Update team member mutation
+  const updateMemberMutation = useMutation({
+    mutationFn: async (updateData: { id: string; name: string; role: string; phone?: string; storeName?: string }) => {
+      return await apiRequest(`/api/team-members/${updateData.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: updateData.name,
+          role: updateData.role,
+          phone: updateData.phone,
+          storeName: updateData.storeName
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      setIsEditMemberOpen(false);
+      setEditingMember(null);
+      setEditMemberEmail("");
+      setEditMemberName("");
+      setEditMemberPhone("");
+      setEditMemberRole("Staff");
+      setEditMemberStore("");
+      toast({
+        title: "Success",
+        description: "Team member has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating team member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update team member. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handler for updating team member
+  const handleUpdateMember = () => {
+    if (!editingMember || !editMemberName || !editMemberRole) {
+      toast({
+        title: "Error",
+        description: "Name and role are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateMemberMutation.mutate({
+      id: editingMember.id,
+      name: editMemberName,
+      role: editMemberRole,
+      phone: editMemberPhone,
+      storeName: editMemberStore || undefined,
+    });
+  };
+
   // Map product categories to the expected format for the UI
   const mappedProductCategories = productCategories.map(category => ({
     id: category.id,
@@ -485,6 +551,17 @@ export default function Settings() {
 
 
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+
+  // Handler for editing team member
+  const handleEditMember = (member: TeamMember) => {
+    setEditingMember(member);
+    setEditMemberEmail(member.email);
+    setEditMemberName(member.name);
+    setEditMemberPhone(member.phone || "");
+    setEditMemberRole(member.role);
+    setEditMemberStore(member.storeName || "");
+    setIsEditMemberOpen(true);
+  };
 
   // Handler for sending team member invitation
   const handleSendInvitation = () => {
@@ -1253,6 +1330,95 @@ export default function Settings() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+
+                {/* Edit Member Dialog */}
+                <Dialog open={isEditMemberOpen} onOpenChange={setIsEditMemberOpen}>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Edit Team Member</DialogTitle>
+                      <DialogDescription>
+                        Update team member information and permissions.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="editMemberName">Full Name</Label>
+                        <Input
+                          id="editMemberName"
+                          value={editMemberName}
+                          onChange={(e) => setEditMemberName(e.target.value)}
+                          placeholder="Enter full name"
+                          data-testid="input-edit-member-name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editMemberEmail">Email Address</Label>
+                        <Input
+                          id="editMemberEmail"
+                          type="email"
+                          value={editMemberEmail}
+                          onChange={(e) => setEditMemberEmail(e.target.value)}
+                          placeholder="Enter email address"
+                          disabled
+                          data-testid="input-edit-member-email"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editMemberPhone">Phone Number</Label>
+                        <Input
+                          id="editMemberPhone"
+                          type="tel"
+                          value={editMemberPhone}
+                          onChange={(e) => setEditMemberPhone(e.target.value)}
+                          placeholder="Enter phone number"
+                          data-testid="input-edit-member-phone"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editMemberRole">Role</Label>
+                        <Select value={editMemberRole} onValueChange={setEditMemberRole}>
+                          <SelectTrigger data-testid="select-edit-member-role">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Admin">Admin</SelectItem>
+                            <SelectItem value="Manager">Manager</SelectItem>
+                            <SelectItem value="Cashier">Cashier</SelectItem>
+                            <SelectItem value="Staff">Staff</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="editMemberStore">Assign Store (Optional)</Label>
+                        <Select value={editMemberStore} onValueChange={setEditMemberStore}>
+                          <SelectTrigger data-testid="select-edit-member-store">
+                            <SelectValue placeholder="Select store (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">No specific store</SelectItem>
+                            {userStores.map((store) => (
+                              <SelectItem key={store.id} value={store.name}>
+                                {store.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsEditMemberOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={handleUpdateMember}
+                        disabled={updateMemberMutation.isPending}
+                        data-testid="button-update-member"
+                      >
+                        {updateMemberMutation.isPending ? "Updating..." : "Update Member"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
@@ -1291,7 +1457,12 @@ export default function Settings() {
                         <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
                           {member.status}
                         </Badge>
-                        <Button variant="outline" size="sm" data-testid={`button-edit-member-${member.id}`}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleEditMember(member)}
+                          data-testid={`button-edit-member-${member.id}`}
+                        >
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </Button>
