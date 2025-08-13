@@ -880,14 +880,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { insertSupplierSchema } = await import('@shared/schema');
       
-      // Convert rating from percentage to decimal and money values to cents where needed
+      // Convert rating from percentage to decimal (rating * 10) but keep money values as-is
       const supplierData = { ...req.body };
       if (supplierData.rating !== undefined) {
         supplierData.rating = Math.round(parseFloat(supplierData.rating) * 10); // Store rating * 10
       }
-      if (supplierData.totalSpent !== undefined) {
-        supplierData.totalSpent = Math.round(parseFloat(supplierData.totalSpent) * 100); // Store as cents
-      }
+      // No conversion needed for totalSpent - store as decimal directly
       
       console.log('Raw supplier data:', req.body);
       console.log('Processed supplier data:', supplierData);
@@ -912,14 +910,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { insertSupplierSchema } = await import('@shared/schema');
       
-      // Convert values as needed
+      // Convert rating only (rating * 10) but keep money values as-is
       const updates = { ...req.body };
       if (updates.rating !== undefined) {
         updates.rating = Math.round(parseFloat(updates.rating) * 10);
       }
-      if (updates.totalSpent !== undefined) {
-        updates.totalSpent = Math.round(parseFloat(updates.totalSpent) * 100);
-      }
+      // No conversion needed for totalSpent - store as decimal directly
       
       const validatedUpdates = insertSupplierSchema.partial().parse(updates);
       const updatedSupplier = await storage.updateSupplier(id, validatedUpdates);
