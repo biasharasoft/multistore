@@ -231,10 +231,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const member = teamMemberRecord[0];
         console.log(`[DEBUG] User is team member with role: ${member.role}`);
         
-        // For Admin role, get all stores from the organization owner
+        // For Admin role, get all stores from the organization owner AND their own stores
         if (member.role === 'Admin') {
-          stores = await storage.getStoresByUserId(member.userId);
-          console.log(`[DEBUG] Admin accessing owner's stores: ${stores.length} stores found`);
+          const ownerStores = await storage.getStoresByUserId(member.userId);
+          const ownStores = await storage.getStoresByUserId(userId);
+          
+          // Combine and deduplicate stores
+          const allStores = [...ownerStores, ...ownStores];
+          const uniqueStores = allStores.filter((store, index, self) => 
+            index === self.findIndex(s => s.id === store.id)
+          );
+          
+          stores = uniqueStores;
+          console.log(`[DEBUG] Admin accessing owner's stores: ${ownerStores.length}, own stores: ${ownStores.length}, total unique: ${stores.length}`);
         } else {
           // For other roles (Manager, Cashier, Staff), only get their assigned store
           if (member.storeId) {
