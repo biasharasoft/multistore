@@ -107,12 +107,12 @@ const convertDbProductToFrontend = (dbProduct: DbProduct, categories: ProductsCa
     name: dbProduct.name || 'Unnamed Product',
     categoryId: dbProduct.categoryId || undefined,
     category: category?.name || "Uncategorized",
-    price: (dbProduct.price || 0) / 100, // Convert cents to dollars
-    cost: (dbProduct.cost || 0) / 100,
-    wholesalerPrice: (dbProduct.wholesalerPrice || 0) / 100,
-    wholesalerDiscount: (dbProduct.wholesalerDiscount || 0) / 100, // Convert to percentage
-    retailPrice: (dbProduct.retailPrice || 0) / 100,
-    retailDiscount: (dbProduct.retailDiscount || 0) / 100,
+    price: dbProduct.price || 0, // Already stored as decimal
+    cost: dbProduct.cost || 0, // Already stored as decimal
+    wholesalerPrice: dbProduct.wholesalerPrice || 0, // Already stored as decimal
+    wholesalerDiscount: dbProduct.wholesalerDiscount || 0, // Already stored as percentage decimal
+    retailPrice: dbProduct.retailPrice || 0, // Already stored as decimal
+    retailDiscount: dbProduct.retailDiscount || 0, // Already stored as percentage decimal
     stock: dbProduct.stock || 0,
     lowStockThreshold: dbProduct.lowStockThreshold || 5,
     description: dbProduct.description || "",

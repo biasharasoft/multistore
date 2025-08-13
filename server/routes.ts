@@ -801,6 +801,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updates.wholesalerDiscount !== undefined) updates.wholesalerDiscount = parseFloat(updates.wholesalerDiscount) || 0;
       if (updates.retailDiscount !== undefined) updates.retailDiscount = parseFloat(updates.retailDiscount) || 0;
       
+      console.log('Update request body:', req.body);
+      console.log('Processed updates:', updates);
+      console.log('Discount values - wholesaler:', updates.wholesalerDiscount, 'retail:', updates.retailDiscount);
+      
       const validatedUpdates = insertProductSchema.partial().parse(updates);
       const updatedProduct = await storage.updateProduct(id, validatedUpdates);
       res.json(updatedProduct);
