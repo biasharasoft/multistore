@@ -10,25 +10,25 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
-  
+
   // Company operations
   getCompanyByUserId(userId: string): Promise<Company | undefined>;
   getCompanyById(id: string): Promise<Company | undefined>;
   createCompany(company: InsertCompany & { userId: string }): Promise<Company>;
   updateCompany(id: string, userId: string, updates: Partial<InsertCompany>): Promise<Company>;
   deleteCompany(id: string, userId: string): Promise<void>;
-  
+
   // Store operations
   getStoresByUserId(userId: string): Promise<Store[]>;
   getStoreById(id: string): Promise<Store | undefined>;
   createStore(store: InsertStore & { userId: string }): Promise<Store>;
   updateStore(id: string, userId: string, updates: Partial<InsertStore>): Promise<Store>;
   deleteStore(id: string, userId: string): Promise<void>;
-  
+
   // Region operations
   getAllRegions(): Promise<Region[]>;
   getActiveRegions(): Promise<Region[]>;
-  
+
   // Products Categories operations
   getAllProductsCategories(): Promise<ProductsCategory[]>;
   getActiveProductsCategories(): Promise<ProductsCategory[]>;
@@ -36,7 +36,7 @@ export interface IStorage {
   createProductsCategory(category: InsertProductsCategory): Promise<ProductsCategory>;
   updateProductsCategory(id: string, updates: Partial<InsertProductsCategory>): Promise<ProductsCategory>;
   deleteProductsCategory(id: string): Promise<void>;
-  
+
   // Expenses Categories operations
   getAllExpensesCategories(): Promise<ExpensesCategory[]>;
   getActiveExpensesCategories(): Promise<ExpensesCategory[]>;
@@ -55,7 +55,7 @@ export interface IStorage {
   createExpense(expense: InsertExpense & { userId: string }): Promise<Expense>;
   updateExpense(id: string, userId: string, updates: Partial<InsertExpense>): Promise<Expense>;
   deleteExpense(id: string, userId: string): Promise<void>;
-  
+
   // Products operations
   getAllProducts(): Promise<Product[]>;
   getActiveProducts(): Promise<Product[]>;
@@ -67,7 +67,7 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product>;
   deleteProduct(id: string): Promise<void>;
-  
+
   // Suppliers operations
   getAllSuppliers(): Promise<Supplier[]>;
   getActiveSuppliers(): Promise<Supplier[]>;
@@ -76,7 +76,7 @@ export interface IStorage {
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
   updateSupplier(id: string, updates: Partial<InsertSupplier>): Promise<Supplier>;
   deleteSupplier(id: string): Promise<void>;
-  
+
   // Customers operations
   getAllCustomers(): Promise<Customer[]>;
   getActiveCustomers(): Promise<Customer[]>;
@@ -85,34 +85,35 @@ export interface IStorage {
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer>;
   deleteCustomer(id: string): Promise<void>;
-  
+
   // Purchases operations
   getPurchasesByUserId(userId: string): Promise<Purchase[]>;
   getPurchaseById(id: string): Promise<Purchase | undefined>;
   createPurchase(purchase: InsertPurchase & { userId: string }): Promise<Purchase>;
   updatePurchase(id: string, userId: string, updates: Partial<InsertPurchase>): Promise<Purchase>;
   deletePurchase(id: string, userId: string): Promise<void>;
-  
+
   // Inventory operations
-  getInventoryByProductId(productId: string): Promise<Inventory | undefined>;
+  getInventoryByProductId(productId: string, storeId?: string): Promise<Inventory | undefined>;
+  getInventoryByProductAndStore(productId: string, storeId: string): Promise<Inventory | undefined>;
   getInventoryById(id: string): Promise<Inventory | undefined>;
   createInventory(inventory: InsertInventory): Promise<Inventory>;
   updateInventory(id: string, updates: Partial<InsertInventory>): Promise<Inventory>;
   deleteInventory(id: string): Promise<void>;
   upsertInventory(productId: string, storeId: string, quantity: number): Promise<Inventory>;
-  
+
   // Inventory Batch operations
   getInventoryBatchesByProductId(productId: string): Promise<InventoryBatch[]>;
   getInventoryBatchById(id: string): Promise<InventoryBatch | undefined>;
   createInventoryBatch(batch: InsertInventoryBatch): Promise<InventoryBatch>;
   updateInventoryBatch(id: string, updates: Partial<InsertInventoryBatch>): Promise<InventoryBatch>;
   deleteInventoryBatch(id: string): Promise<void>;
-  
+
   // Appearance theme settings operations
   getAppearanceSettings(userId: string): Promise<AppearanceThemesSettings | undefined>;
   createAppearanceSettings(settings: InsertAppearanceThemesSettings & { userId: string }): Promise<AppearanceThemesSettings>;
   updateAppearanceSettings(userId: string, updates: Partial<InsertAppearanceThemesSettings>): Promise<AppearanceThemesSettings>;
-  
+
   // Industries categories operations
   getAllIndustriesCategories(): Promise<IndustryCategory[]>;
   getActiveIndustriesCategories(): Promise<IndustryCategory[]>;
@@ -120,7 +121,7 @@ export interface IStorage {
   createIndustryCategory(category: InsertIndustryCategory): Promise<IndustryCategory>;
   updateIndustryCategory(id: string, updates: Partial<InsertIndustryCategory>): Promise<IndustryCategory>;
   deleteIndustryCategory(id: string): Promise<void>;
-  
+
   // Team member operations
   getTeamMembersByUserId(userId: string): Promise<TeamMember[]>;
   getTeamMemberById(id: string): Promise<TeamMember | undefined>;
@@ -128,7 +129,7 @@ export interface IStorage {
   createTeamMember(member: InsertTeamMember & { userId: string }): Promise<TeamMember>;
   updateTeamMember(id: string, userId: string, updates: Partial<InsertTeamMember>): Promise<TeamMember>;
   deleteTeamMember(id: string, userId: string): Promise<void>;
-  
+
   // Team invitation operations
   getTeamInvitationsByUserId(userId: string): Promise<TeamInvitation[]>;
   getTeamInvitationById(id: string): Promise<TeamInvitation | undefined>;
@@ -136,7 +137,7 @@ export interface IStorage {
   createTeamInvitation(invitation: InsertTeamInvitation & { organizationOwnerId: string; token: string; expiresAt: Date }): Promise<TeamInvitation>;
   updateTeamInvitation(id: string, updates: Partial<InsertTeamInvitation>): Promise<TeamInvitation>;
   deleteTeamInvitation(id: string): Promise<void>;
-  
+
   // Sales operations
   getAllSales(): Promise<Sale[]>;
   getSalesByUserId(userId: string): Promise<Sale[]>;
@@ -145,7 +146,7 @@ export interface IStorage {
   createSale(sale: InsertSale & { userId: string }): Promise<Sale>;
   updateSale(id: string, userId: string, updates: Partial<InsertSale>): Promise<Sale>;
   deleteSale(id: string, userId: string): Promise<void>;
-  
+
   // Sale Items operations
   getSaleItemsBySaleId(saleId: string): Promise<SaleItem[]>;
   getSaleItemById(id: string): Promise<SaleItem | undefined>;
@@ -183,11 +184,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(users.id, id))
       .returning();
-    
+
     if (!user) {
       throw new Error("User not found");
     }
-    
+
     return user;
   }
 
@@ -225,11 +226,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(eq(companies.id, id), eq(companies.userId, userId)))
       .returning();
-    
+
     if (!company) {
       throw new Error('Company not found or access denied');
     }
-    
+
     return company;
   }
 
@@ -279,11 +280,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(eq(stores.id, id), eq(stores.userId, userId)))
       .returning();
-    
+
     if (!store) {
       throw new Error("Store not found or you don't have permission to update it");
     }
-    
+
     return store;
   }
 
@@ -292,7 +293,7 @@ export class DatabaseStorage implements IStorage {
       .delete(stores)
       .where(and(eq(stores.id, id), eq(stores.userId, userId)))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Store not found or you don't have permission to delete it");
     }
@@ -356,11 +357,11 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(productsCategories.id, id))
       .returning();
-    
+
     if (!category) {
       throw new Error("Category not found");
     }
-    
+
     return category;
   }
 
@@ -369,7 +370,7 @@ export class DatabaseStorage implements IStorage {
       .delete(productsCategories)
       .where(eq(productsCategories.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Category not found");
     }
@@ -415,11 +416,11 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(expensesCategories.id, id))
       .returning();
-    
+
     if (!category) {
       throw new Error("Category not found");
     }
-    
+
     return category;
   }
 
@@ -428,7 +429,7 @@ export class DatabaseStorage implements IStorage {
       .delete(expensesCategories)
       .where(eq(expensesCategories.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Category not found");
     }
@@ -477,29 +478,60 @@ export class DatabaseStorage implements IStorage {
     return categoryProducts;
   }
 
+  // Get low stock products from inventory
   async getLowStockProducts(): Promise<Product[]> {
-    const lowStockProducts = await db
-      .select()
-      .from(products)
-      .where(and(
-        eq(products.status, "active"),
-        sql`${products.stock} <= ${products.lowStockThreshold}`,
-        sql`${products.stock} > 0`
-      ))
-      .orderBy(products.stock);
-    return lowStockProducts;
+    return await db.select({
+      id: products.id,
+      name: products.name,
+      categoryId: products.categoryId,
+      price: products.price,
+      cost: products.cost,
+      wholesalerPrice: products.wholesalerPrice,
+      wholesalerDiscount: products.wholesalerDiscount,
+      retailPrice: products.retailPrice,
+      retailDiscount: products.retailDiscount,
+      stock: inventory.quantity,
+      lowStockThreshold: products.lowStockThreshold,
+      description: products.description,
+      barcode: products.barcode,
+      image: products.image,
+      status: products.status,
+      createdAt: products.createdAt,
+      updatedAt: products.updatedAt,
+      storeId: inventory.storeId
+    })
+    .from(products)
+    .innerJoin(inventory, eq(products.id, inventory.productId))
+    .where(sql`${inventory.quantity} <= ${products.lowStockThreshold} AND ${inventory.quantity} > 0`)
+    .orderBy(products.name);
   }
 
+  // Get out of stock products from inventory
   async getOutOfStockProducts(): Promise<Product[]> {
-    const outOfStockProducts = await db
-      .select()
-      .from(products)
-      .where(and(
-        eq(products.status, "active"),
-        eq(products.stock, 0)
-      ))
-      .orderBy(products.name);
-    return outOfStockProducts;
+    return await db.select({
+      id: products.id,
+      name: products.name,
+      categoryId: products.categoryId,
+      price: products.price,
+      cost: products.cost,
+      wholesalerPrice: products.wholesalerPrice,
+      wholesalerDiscount: products.wholesalerDiscount,
+      retailPrice: products.retailPrice,
+      retailDiscount: products.retailDiscount,
+      stock: inventory.quantity,
+      lowStockThreshold: products.lowStockThreshold,
+      description: products.description,
+      barcode: products.barcode,
+      image: products.image,
+      status: products.status,
+      createdAt: products.createdAt,
+      updatedAt: products.updatedAt,
+      storeId: inventory.storeId
+    })
+    .from(products)
+    .innerJoin(inventory, eq(products.id, inventory.productId))
+    .where(eq(inventory.quantity, 0))
+    .orderBy(products.name);
   }
 
   async createProduct(productData: InsertProduct): Promise<Product> {
@@ -519,11 +551,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(products.id, id))
       .returning();
-    
+
     if (!product) {
       throw new Error("Product not found");
     }
-    
+
     return product;
   }
 
@@ -532,7 +564,7 @@ export class DatabaseStorage implements IStorage {
       .delete(products)
       .where(eq(products.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Product not found");
     }
@@ -590,11 +622,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(suppliers.id, id))
       .returning();
-    
+
     if (!supplier) {
       throw new Error("Supplier not found");
     }
-    
+
     return supplier;
   }
 
@@ -603,7 +635,7 @@ export class DatabaseStorage implements IStorage {
       .delete(suppliers)
       .where(eq(suppliers.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Supplier not found");
     }
@@ -652,7 +684,7 @@ export class DatabaseStorage implements IStorage {
     if (insertData.dateOfBirth && typeof insertData.dateOfBirth === 'string') {
       insertData.dateOfBirth = new Date(insertData.dateOfBirth);
     }
-    
+
     const [customer] = await db
       .insert(customers)
       .values([insertData])
@@ -666,7 +698,7 @@ export class DatabaseStorage implements IStorage {
     if (updateData.dateOfBirth && typeof updateData.dateOfBirth === 'string') {
       updateData.dateOfBirth = new Date(updateData.dateOfBirth);
     }
-    
+
     const [customer] = await db
       .update(customers)
       .set({
@@ -675,11 +707,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(customers.id, id))
       .returning();
-    
+
     if (!customer) {
       throw new Error("Customer not found");
     }
-    
+
     return customer;
   }
 
@@ -688,7 +720,7 @@ export class DatabaseStorage implements IStorage {
       .delete(customers)
       .where(eq(customers.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Customer not found");
     }
@@ -718,7 +750,7 @@ export class DatabaseStorage implements IStorage {
     if (insertData.purchaseDate && typeof insertData.purchaseDate === 'string') {
       insertData.purchaseDate = new Date(insertData.purchaseDate);
     }
-    
+
     // Create the purchase record
     const [purchase] = await db
       .insert(purchases)
@@ -749,7 +781,7 @@ export class DatabaseStorage implements IStorage {
 
     // Update inventory to increment product quantity for the specific store
     await this.upsertInventory(purchaseData.productId, (purchaseData as any).storeId, purchaseData.quantity);
-    
+
     return purchase;
   }
 
@@ -759,7 +791,7 @@ export class DatabaseStorage implements IStorage {
     if (updateData.purchaseDate && typeof updateData.purchaseDate === 'string') {
       updateData.purchaseDate = new Date(updateData.purchaseDate);
     }
-    
+
     const [purchase] = await db
       .update(purchases)
       .set({
@@ -768,11 +800,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(eq(purchases.id, id), eq(purchases.userId, userId)))
       .returning();
-    
+
     if (!purchase) {
       throw new Error("Purchase not found");
     }
-    
+
     return purchase;
   }
 
@@ -781,7 +813,7 @@ export class DatabaseStorage implements IStorage {
       .delete(purchases)
       .where(and(eq(purchases.id, id), eq(purchases.userId, userId)))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Purchase not found");
     }
@@ -822,11 +854,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(inventoryBatch.id, id))
       .returning();
-    
+
     if (!batch) {
       throw new Error("Inventory batch not found");
     }
-    
+
     return batch;
   }
 
@@ -835,7 +867,7 @@ export class DatabaseStorage implements IStorage {
       .delete(inventoryBatch)
       .where(eq(inventoryBatch.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Inventory batch not found");
     }
@@ -844,11 +876,11 @@ export class DatabaseStorage implements IStorage {
   // Inventory operations
   async getInventoryByProductId(productId: string, storeId?: string): Promise<Inventory | undefined> {
     const conditions = [eq(inventory.productId, productId)];
-    
+
     if (storeId) {
       conditions.push(eq(inventory.storeId, storeId));
     }
-    
+
     const [inventoryRecord] = await db
       .select()
       .from(inventory)
@@ -889,11 +921,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(inventory.id, id))
       .returning();
-    
+
     if (!inventoryRecord) {
       throw new Error("Inventory record not found");
     }
-    
+
     return inventoryRecord;
   }
 
@@ -902,7 +934,7 @@ export class DatabaseStorage implements IStorage {
       .delete(inventory)
       .where(eq(inventory.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Inventory record not found");
     }
@@ -910,7 +942,7 @@ export class DatabaseStorage implements IStorage {
 
   async upsertInventory(productId: string, storeId: string, quantityToAdd: number): Promise<Inventory> {
     const existingInventory = await this.getInventoryByProductAndStore(productId, storeId);
-    
+
     if (existingInventory) {
       // Update existing inventory by adding the new quantity
       return await this.updateInventory(existingInventory.id, {
@@ -959,17 +991,17 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(appearanceThemesSettings.userId, userId))
       .returning();
-    
+
     if (!settings) {
       throw new Error("Appearance settings not found");
     }
-    
+
     return settings;
   }
 
   async upsertAppearanceSettings(userId: string, settingsData: InsertAppearanceThemesSettings): Promise<AppearanceThemesSettings> {
     const existing = await this.getAppearanceSettingsByUserId(userId);
-    
+
     if (existing) {
       return await this.updateAppearanceSettings(userId, settingsData);
     } else {
@@ -1013,11 +1045,11 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(industriesCategories.id, id))
       .returning();
-    
+
     if (!category) {
       throw new Error("Industry category not found");
     }
-    
+
     return category;
   }
 
@@ -1026,7 +1058,7 @@ export class DatabaseStorage implements IStorage {
       .delete(industriesCategories)
       .where(eq(industriesCategories.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Industry category not found");
     }
@@ -1081,11 +1113,11 @@ export class DatabaseStorage implements IStorage {
         eq(teamMembers.userId, userId)
       ))
       .returning();
-    
+
     if (!member) {
       throw new Error("Team member not found");
     }
-    
+
     return member;
   }
 
@@ -1097,7 +1129,7 @@ export class DatabaseStorage implements IStorage {
         eq(teamMembers.userId, userId)
       ))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Team member not found");
     }
@@ -1143,11 +1175,11 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(teamInvitations.id, id))
       .returning();
-    
+
     if (!invitation) {
       throw new Error("Team invitation not found");
     }
-    
+
     return invitation;
   }
 
@@ -1156,7 +1188,7 @@ export class DatabaseStorage implements IStorage {
       .delete(teamInvitations)
       .where(eq(teamInvitations.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Team invitation not found");
     }
@@ -1197,7 +1229,7 @@ export class DatabaseStorage implements IStorage {
     return storeExpenses;
   }
 
-  async getExpensesByCategory(categoryId: string): Promise<Expense[]> {
+  async getExpensesByCategory(categoryId: string): Promise<Expense[] > {
     const categoryExpenses = await db
       .select()
       .from(expenses)
@@ -1221,7 +1253,7 @@ export class DatabaseStorage implements IStorage {
     if (insertData.expenseDate && typeof insertData.expenseDate === 'string') {
       insertData.expenseDate = new Date(insertData.expenseDate);
     }
-    
+
     const [expense] = await db
       .insert(expenses)
       .values(insertData)
@@ -1235,7 +1267,7 @@ export class DatabaseStorage implements IStorage {
     if (updateData.expenseDate && typeof updateData.expenseDate === 'string') {
       updateData.expenseDate = new Date(updateData.expenseDate);
     }
-    
+
     const [expense] = await db
       .update(expenses)
       .set({
@@ -1244,11 +1276,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
       .returning();
-    
+
     if (!expense) {
       throw new Error("Expense not found");
     }
-    
+
     return expense;
   }
 
@@ -1257,7 +1289,7 @@ export class DatabaseStorage implements IStorage {
       .delete(expenses)
       .where(and(eq(expenses.id, id), eq(expenses.userId, userId)))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Expense not found");
     }
@@ -1315,11 +1347,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(eq(sales.id, id), eq(sales.userId, userId)))
       .returning();
-    
+
     if (!sale) {
       throw new Error("Sale not found");
     }
-    
+
     return sale;
   }
 
@@ -1328,7 +1360,7 @@ export class DatabaseStorage implements IStorage {
       .delete(sales)
       .where(and(eq(sales.id, id), eq(sales.userId, userId)))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Sale not found");
     }
@@ -1366,11 +1398,11 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(saleItems.id, id))
       .returning();
-    
+
     if (!item) {
       throw new Error("Sale item not found");
     }
-    
+
     return item;
   }
 
@@ -1379,7 +1411,7 @@ export class DatabaseStorage implements IStorage {
       .delete(saleItems)
       .where(eq(saleItems.id, id))
       .returning();
-    
+
     if (result.length === 0) {
       throw new Error("Sale item not found");
     }

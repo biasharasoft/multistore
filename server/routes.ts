@@ -2006,18 +2006,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
 
-      // For now, return empty alerts to prevent the error
-      // This can be enhanced later with actual inventory tracking
-      const alerts = [
-        {
-          product: 'Sample Product',
-          sku: 'SKU-001',
-          stock: 5,
-          minStock: 10,
-          status: 'low',
-          store: 'Main Store'
-        }
-      ];
+      // Get actual low stock alerts from inventory
+      const alerts = await db.select({
+        product: products.name,
+        sku: products.barcode,
+        stock: inventory.quantity,
+        minStock: products.lowStockThreshold,
+        status: sql<string>`CASE 
+          WHEN ${inventory.quantity} = 0 THEN 'out' 
+          WHEN ${inventory.quantity} <= ${products.lowStockThreshold} THEN 'low'
+          ELSE 'normal'
+        END`,
+        store: stores.name
+      })
+      .from(inventory)
+      .innerJoin(products, eq(inventory.productId, products.id))
+      .innerJoin(stores, eq(inventory.storeId, stores.id))
+      .where(
+        and(
+          inArray(inventory.storeId, accessibleStoreIds),
+          sql`${inventory.quantity} <= ${products.lowStockThreshold}`
+        )
+      )
+      .orderBy(inventory.quantity)
+      .limit(10);
 
       res.json(alerts);
     } catch (error) {

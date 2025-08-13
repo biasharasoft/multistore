@@ -100,7 +100,7 @@ const convertDbProductToFrontend = (dbProduct: DbProduct, categories: ProductsCa
   if (!dbProduct) {
     throw new Error('Product data is required');
   }
-  
+
   const category = categories.find(c => c.id === dbProduct.categoryId);
   return {
     id: dbProduct.id || '',
@@ -139,7 +139,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",
@@ -162,7 +162,7 @@ export default function ProductDetail() {
     queryKey: ['/api/products', id],
     enabled: !!id,
   });
-  
+
   const { data: categories = [] } = useQuery<ProductsCategory[]>({
     queryKey: ['/api/products-categories'],
   });
@@ -346,7 +346,7 @@ export default function ProductDetail() {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Badge variant={product?.status === 'active' ? 'default' : 'secondary'}>
                 {product?.status ? (product.status.charAt(0).toUpperCase() + product.status.slice(1)) : 'Loading...'}
@@ -618,7 +618,7 @@ export default function ProductDetail() {
                     <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
                   </div>
                 </div>
-                
+
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={salesData}>
@@ -746,39 +746,6 @@ export default function ProductDetail() {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Inventory Info */}
-            <Card className="shadow-lg border-0 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Warehouse className="h-5 w-5 text-primary" />
-                  Inventory Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Current Stock</span>
-                    <span className="font-medium">{product.stock} units</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Low Stock Threshold</span>
-                    <span className="font-medium">{product.lowStockThreshold} units</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Stock Value</span>
-                    <span className="font-medium">${stockValue.toFixed(2)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Status</span>
-                    <Badge variant={isOutOfStock ? 'destructive' : isLowStock ? 'secondary' : 'default'}>
-                      {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
-                    </Badge>
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
