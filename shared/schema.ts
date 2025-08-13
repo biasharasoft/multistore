@@ -275,11 +275,11 @@ export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
   categoryId: varchar("category_id").references(() => productsCategories.id, { onDelete: "set null" }),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
-  cost: decimal("cost", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal  
-  wholesalerPrice: decimal("wholesaler_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  price: decimal("price", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  cost: decimal("cost", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal  
+  wholesalerPrice: decimal("wholesaler_price", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal
   wholesalerDiscount: decimal("wholesaler_discount", { precision: 10, scale: 2 }).default("0.00"), // Store as percentage
-  retailPrice: decimal("retail_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  retailPrice: decimal("retail_price", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal
   retailDiscount: decimal("retail_discount", { precision: 10, scale: 2 }).default("0.00"), // Store as percentage
   stock: integer("stock").notNull().default(0),
   lowStockThreshold: integer("low_stock_threshold").notNull().default(5),
@@ -354,11 +354,11 @@ export const inventoryBatch = pgTable("inventory_batch", {
   storeId: varchar("store_id").references(() => stores.id, { onDelete: "cascade" }).notNull(),
   batchNumber: varchar("batch_number").notNull(),
   quantity: integer("quantity").notNull().default(0),
-  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
-  buyingPrice: decimal("buying_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
-  retailPrice: decimal("retail_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  totalCost: decimal("total_cost", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  buyingPrice: decimal("buying_price", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  retailPrice: decimal("retail_price", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal
   retailDiscount: decimal("retail_discount", { precision: 10, scale: 2 }).default("0.00"), // Store as percentage
-  wholesalerPrice: decimal("wholesaler_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  wholesalerPrice: decimal("wholesaler_price", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal
   wholesalerDiscount: decimal("wholesaler_discount", { precision: 10, scale: 2 }).default("0.00"), // Store as percentage
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -497,8 +497,8 @@ export const purchases = pgTable("purchases", {
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   supplierId: varchar("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
   quantity: integer("quantity").notNull(),
-  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
-  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  totalCost: decimal("total_cost", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  sellingPrice: decimal("selling_price", { precision: 15, scale: 2 }).notNull().default("0.00"), // Store as decimal
   purchaseDate: timestamp("purchase_date").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
