@@ -523,7 +523,7 @@ export default function Settings() {
       name: editMemberName,
       role: editMemberRole,
       phone: editMemberPhone,
-      storeName: editMemberStore || undefined,
+      storeName: (editMemberStore === 'none') ? undefined : editMemberStore,
     });
   };
 
@@ -559,7 +559,7 @@ export default function Settings() {
     setEditMemberName(member.name);
     setEditMemberPhone(member.phone || "");
     setEditMemberRole(member.role);
-    setEditMemberStore(member.storeName || "");
+    setEditMemberStore(member.storeName || "none");
     setIsEditMemberOpen(true);
   };
 
@@ -1395,7 +1395,7 @@ export default function Settings() {
                             <SelectValue placeholder="Select store (optional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">No specific store</SelectItem>
+                            <SelectItem value="none">No specific store</SelectItem>
                             {userStores.map((store) => (
                               <SelectItem key={store.id} value={store.name}>
                                 {store.name}
