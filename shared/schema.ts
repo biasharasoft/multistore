@@ -357,9 +357,9 @@ export const inventoryBatch = pgTable("inventory_batch", {
   totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
   buyingPrice: decimal("buying_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
   retailPrice: decimal("retail_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
-  retailDiscount: decimal("retail_discount", { precision: 5, scale: 2 }).default("0.00"), // Store as percentage
+  retailDiscount: decimal("retail_discount", { precision: 10, scale: 2 }).default("0.00"), // Store as percentage
   wholesalerPrice: decimal("wholesaler_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
-  wholesalerDiscount: decimal("wholesaler_discount", { precision: 5, scale: 2 }).default("0.00"), // Store as percentage
+  wholesalerDiscount: decimal("wholesaler_discount", { precision: 10, scale: 2 }).default("0.00"), // Store as percentage
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
