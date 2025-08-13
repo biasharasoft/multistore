@@ -15,7 +15,7 @@ import {
   ChevronRight,
   Receipt
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@/hooks/useStore";
 
@@ -36,11 +36,37 @@ export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { selectedStore, setSelectedStore } = useStore();
 
-  // Fetch user's stores
+  // Fetch user data with role information
+  const { data: userData } = useQuery({
+    queryKey: ['/api/auth/me'],
+  });
+
+  // Fetch user's accessible stores (role-based)
   const { data: stores = [], isLoading: storesLoading } = useQuery<Store[]>({
     queryKey: ['/api/stores'],
     enabled: !isCollapsed, // Only fetch when sidebar is expanded
   });
+
+  // Auto-select store for non-admin users
+  useEffect(() => {
+    if (userData?.user && stores.length > 0) {
+      const userRole = userData.user.role;
+      const assignedStoreId = userData.user.assignedStoreId;
+      
+      // For non-admin roles, auto-select their assigned store
+      if (userRole !== 'Admin' && userRole !== 'Owner' && assignedStoreId) {
+        const assignedStore = stores.find(store => store.id === assignedStoreId);
+        if (assignedStore && selectedStore !== assignedStoreId) {
+          setSelectedStore(assignedStoreId);
+        }
+      }
+      
+      // If no store selected and user has stores, select the first one
+      if (!selectedStore && stores.length > 0) {
+        setSelectedStore(stores[0].id);
+      }
+    }
+  }, [userData, stores, selectedStore, setSelectedStore]);
 
   const navigationItems = [
     {
@@ -171,7 +197,14 @@ export function Sidebar({ className }: SidebarProps) {
         <div className="p-4 border-t border-sidebar-border">
           <div className="bg-sidebar-border rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-sidebar-foreground">Current Store</span>
+              <span className="text-sm font-medium text-sidebar-foreground">
+                Current Store
+                {userData?.user?.role && userData.user.role !== 'Owner' && (
+                  <span className="ml-1 text-xs text-sidebar-foreground/60">
+                    ({userData.user.role})
+                  </span>
+                )}
+              </span>
               <Store className="h-4 w-4 text-sidebar-foreground/60" />
             </div>
             <select 
@@ -179,6 +212,7 @@ export function Sidebar({ className }: SidebarProps) {
               value={selectedStore}
               onChange={(e) => setSelectedStore(e.target.value)}
               data-testid="select-current-store"
+              disabled={userData?.user?.role && userData.user.role !== 'Admin' && userData.user.role !== 'Owner'}
             >
               <option value="">
                 {storesLoading ? "Loading stores..." : stores.length === 0 ? "No stores available" : "Select a store"}
@@ -186,6 +220,9 @@ export function Sidebar({ className }: SidebarProps) {
               {stores.map((store) => (
                 <option key={store.id} value={store.id}>
                   {store.name}
+                  {userData?.user?.assignedStoreId === store.id && userData?.user?.role !== 'Owner' && userData?.user?.role !== 'Admin' && (
+                    " (Assigned)"
+                  )}
                 </option>
               ))}
             </select>

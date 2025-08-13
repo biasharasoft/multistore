@@ -85,7 +85,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get current user
   app.get('/api/auth/me', authenticateToken, async (req, res) => {
-    res.json({ user: req.user });
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      
+      // Check if this user is a team member (to get their role and assigned store)
+      let userRole = 'Owner'; // Default role for account owners
+      let assignedStoreId = null;
+      
+      // Look for team member record where invitedUserId matches current user
+      const teamMemberRecord = await db
+        .select()
+        .from(teamMembers)
+        .where(eq(teamMembers.invitedUserId, userId))
+        .limit(1);
+      
+      if (teamMemberRecord.length > 0) {
+        const member = teamMemberRecord[0];
+        userRole = member.role;
+        assignedStoreId = member.storeId;
+      }
+      
+      // Return user with role and store information
+      res.json({ 
+        user: {
+          ...req.user,
+          role: userRole,
+          assignedStoreId
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching user with role:', error);
+      res.json({ user: req.user }); // Fallback to original behavior
+    }
   });
 
   // Password Reset - Step 1: Send OTP
@@ -175,12 +209,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Store Routes
   
-  // Get all stores for the authenticated user
+  // Get accessible stores for the authenticated user (role-based)
   app.get('/api/stores', authenticateToken, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const userStores = await storage.getStoresByUserId(userId);
-      res.json(userStores);
+      let stores = [];
+      
+      // Check if this user is a team member
+      const teamMemberRecord = await db
+        .select()
+        .from(teamMembers)
+        .where(eq(teamMembers.invitedUserId, userId))
+        .limit(1);
+      
+      if (teamMemberRecord.length > 0) {
+        const member = teamMemberRecord[0];
+        
+        // For Admin role, get all stores from the organization owner
+        if (member.role === 'Admin') {
+          stores = await storage.getStoresByUserId(member.userId);
+        } else {
+          // For other roles (Manager, Cashier, Staff), only get their assigned store
+          if (member.storeId) {
+            const assignedStore = await storage.getStoreById(member.storeId);
+            if (assignedStore) {
+              stores = [assignedStore];
+            }
+          }
+        }
+      } else {
+        // This is an account owner, get all their stores
+        stores = await storage.getStoresByUserId(userId);
+      }
+      
+      res.json(stores);
     } catch (error) {
       console.error('Error fetching stores:', error);
       res.status(500).json({ 

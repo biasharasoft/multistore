@@ -51,6 +51,16 @@ A comprehensive retail management system with Point of Sale (POS), inventory man
 - All components and pages preserved from original project
 
 ## Recent Changes
+- **2025-08-10**: Implemented role-based store access control system
+  - Modified /api/auth/me endpoint to include user role and assigned store information
+  - Updated /api/stores endpoint to filter accessible stores based on user role:
+    - Owner: Can access all their stores
+    - Admin: Can access all stores from the organization owner 
+    - Manager/Cashier/Staff: Can only access their specifically assigned store
+  - Enhanced Sidebar component to show role information and auto-select assigned stores
+  - Non-admin users cannot change store selection - it's locked to their assigned store
+  - Store selector shows "(Assigned)" label for team members' designated stores
+  - Fixed team member Edit button SelectItem empty string validation error
 - **2025-08-10**: Created inventory management database schema
   - Added inventory table with id, product_id, and quantity columns
   - Added inventory_batch table with id, product_id, batch_number, quantity, total_cost, buying_price, retail_price, retail_discount, wholesaler_price, and wholesaler_discount columns
