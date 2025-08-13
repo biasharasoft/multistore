@@ -60,7 +60,7 @@ export default function Settings() {
   // Team member invitation states
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
-  const [inviteRole, setInviteRole] = useState("viewer");
+  const [inviteRole, setInviteRole] = useState("Staff");
   const [inviteStore, setInviteStore] = useState("");
 
   // Fetch products categories
@@ -429,7 +429,7 @@ export default function Settings() {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       setInviteEmail("");
       setInviteName("");
-      setInviteRole("viewer");
+      setInviteRole("Staff");
       setInviteStore("");
       setIsAddMemberOpen(false);
       
@@ -1187,10 +1187,10 @@ export default function Settings() {
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                            <SelectItem value="editor">Editor</SelectItem>
-                            <SelectItem value="viewer">Viewer</SelectItem>
+                            <SelectItem value="Admin">Admin</SelectItem>
+                            <SelectItem value="Manager">Manager</SelectItem>
+                            <SelectItem value="Cashier">Cashier</SelectItem>
+                            <SelectItem value="Staff">Staff</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
