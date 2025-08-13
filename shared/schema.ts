@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
@@ -275,12 +275,12 @@ export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
   categoryId: varchar("category_id").references(() => productsCategories.id, { onDelete: "set null" }),
-  price: integer("price").notNull().default(0), // Store as cents
-  cost: integer("cost").notNull().default(0), // Store as cents
-  wholesalerPrice: integer("wholesaler_price").notNull().default(0), // Store as cents
-  wholesalerDiscount: integer("wholesaler_discount").default(0), // Store as percentage * 100
-  retailPrice: integer("retail_price").notNull().default(0), // Store as cents
-  retailDiscount: integer("retail_discount").default(0), // Store as percentage * 100
+  price: decimal("price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  cost: decimal("cost", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal  
+  wholesalerPrice: decimal("wholesaler_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  wholesalerDiscount: decimal("wholesaler_discount", { precision: 5, scale: 2 }).default("0.00"), // Store as percentage
+  retailPrice: decimal("retail_price", { precision: 10, scale: 2 }).notNull().default("0.00"), // Store as decimal
+  retailDiscount: decimal("retail_discount", { precision: 5, scale: 2 }).default("0.00"), // Store as percentage
   stock: integer("stock").notNull().default(0),
   lowStockThreshold: integer("low_stock_threshold").notNull().default(5),
   description: text("description"),
@@ -309,12 +309,12 @@ export const insertProductSchema = createInsertSchema(products).pick({
   status: true,
 }).extend({
   name: z.string().min(1, "Product name is required"),
-  price: z.number().min(0, "Price must be non-negative"),
-  cost: z.number().min(0, "Cost must be non-negative"),
-  wholesalerPrice: z.number().min(0, "Wholesaler price must be non-negative"),
-  wholesalerDiscount: z.number().min(0).max(10000, "Discount must be valid").optional(),
-  retailPrice: z.number().min(0, "Retail price must be non-negative"),
-  retailDiscount: z.number().min(0).max(10000, "Discount must be valid").optional(),
+  price: z.coerce.number().min(0, "Price must be non-negative"),
+  cost: z.coerce.number().min(0, "Cost must be non-negative"),
+  wholesalerPrice: z.coerce.number().min(0, "Wholesaler price must be non-negative"),
+  wholesalerDiscount: z.coerce.number().min(0).max(100, "Discount must be valid percentage").optional(),
+  retailPrice: z.coerce.number().min(0, "Retail price must be non-negative"),
+  retailDiscount: z.coerce.number().min(0).max(100, "Discount must be valid percentage").optional(),
   stock: z.number().min(0, "Stock must be non-negative"),
   lowStockThreshold: z.number().min(0, "Low stock threshold must be non-negative"),
   status: z.enum(["active", "inactive", "discontinued"]).optional(),

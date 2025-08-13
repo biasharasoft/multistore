@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useStore } from "@/hooks/useStore";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrency, formatDecimalCurrency } from "@/lib/currency";
 
 interface Product {
   id: string;
@@ -312,7 +312,7 @@ const POS = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-bold text-primary">
-                          {formatCurrency(product.price, company?.currency || 'tzs')}
+                          {formatDecimalCurrency(product.price, (company as any)?.currency || 'tzs')}
                         </span>
                         <Badge variant={product.stock > 10 ? "default" : product.stock > 0 ? "secondary" : "destructive"} className="text-xs">
                           {product.stock}
@@ -463,16 +463,16 @@ const POS = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>{formatCurrency(subtotal, company?.currency || 'tzs')}</span>
+                    <span>{formatDecimalCurrency(subtotal, (company as any)?.currency || 'tzs')}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Tax (8%):</span>
-                    <span>{formatCurrency(tax, company?.currency || 'tzs')}</span>
+                    <span>{formatDecimalCurrency(tax, (company as any)?.currency || 'tzs')}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total:</span>
-                    <span className="text-primary">{formatCurrency(total, company?.currency || 'tzs')}</span>
+                    <span className="text-primary">{formatDecimalCurrency(total, (company as any)?.currency || 'tzs')}</span>
                   </div>
                 </div>
 
@@ -548,16 +548,16 @@ const POS = () => {
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                               <span>Subtotal:</span>
-                              <span>{formatCurrency(subtotal, company?.currency || 'tzs')}</span>
+                              <span>{formatDecimalCurrency(subtotal, (company as any)?.currency || 'tzs')}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Tax (8%):</span>
-                              <span>{formatCurrency(tax, company?.currency || 'tzs')}</span>
+                              <span>{formatDecimalCurrency(tax, (company as any)?.currency || 'tzs')}</span>
                             </div>
                             <Separator />
                             <div className="flex justify-between font-bold">
                               <span>Total:</span>
-                              <span className="text-primary">{formatCurrency(total, company?.currency || 'tzs')}</span>
+                              <span className="text-primary">{formatDecimalCurrency(total, (company as any)?.currency || 'tzs')}</span>
                             </div>
                           </div>
                         </div>

@@ -1,5 +1,5 @@
 export function formatCurrency(amount: number, currency: string = 'USD'): string {
-  // Convert from cents to dollars
+  // Convert from cents to dollars (for expenses and other legacy cent-based values)
   const amountInDollars = amount / 100;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -7,6 +7,16 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amountInDollars);
+}
+
+export function formatDecimalCurrency(amount: number, currency: string = 'USD'): string {
+  // For products and other decimal-based values (no conversion needed)
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
 }
 
 export function getSupportedCurrencies() {
