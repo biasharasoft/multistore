@@ -32,10 +32,56 @@ import {
   inventoryBatch,
   users,
   teamMembers,
-  teamInvitations
+  teamInvitations,
+  customers,
+  suppliers,
+  companies,
+  stores,
+  purchases,
+  regionsTable,
+  industriesCategories,
+  appearanceThemesSettings
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, inArray, gte, lt } from "drizzle-orm";
+
+// Helper function to get accessible store IDs for a user based on their role
+async function getAccessibleStoreIds(userId: string): Promise<string[]> {
+  // Check if this user is a team member
+  const teamMemberRecord = await db
+    .select()
+    .from(teamMembers)
+    .where(eq(teamMembers.invitedUserId, userId))
+    .limit(1);
+  
+  if (teamMemberRecord.length > 0) {
+    const member = teamMemberRecord[0];
+    
+    // For Admin role, get all stores from the organization owner AND their own stores
+    if (member.role === 'Admin') {
+      const ownerStores = await storage.getStoresByUserId(member.userId);
+      const ownStores = await storage.getStoresByUserId(userId);
+      
+      // Combine and deduplicate stores
+      const allStores = [...ownerStores, ...ownStores];
+      const uniqueStores = allStores.filter((store, index, self) => 
+        index === self.findIndex(s => s.id === store.id)
+      );
+      
+      return uniqueStores.map(store => store.id);
+    } else {
+      // For other roles (Manager, Cashier, Staff), only get their assigned store
+      if (member.storeId) {
+        return [member.storeId];
+      }
+      return [];
+    }
+  } else {
+    // This is an account owner, get all their stores
+    const stores = await storage.getStoresByUserId(userId);
+    return stores.map(store => store.id);
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication Routes
@@ -1733,6 +1779,321 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching team invitations:', error);
       res.status(500).json({ 
         message: error instanceof Error ? error.message : 'Failed to fetch invitations' 
+      });
+    }
+  });
+
+  // Dashboard Analytics Routes
+  
+  // Get dashboard metrics (revenue, sales, customers, products)
+  app.get('/api/dashboard/metrics', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      // Get accessible stores for the user
+      const accessibleStoreIds = await getAccessibleStoreIds(userId);
+      
+      if (accessibleStoreIds.length === 0) {
+        return res.json({
+          totalRevenue: 0,
+          totalSales: 0,
+          totalCustomers: 0,
+          totalProducts: 0
+        });
+      }
+
+      // Calculate total potential revenue from purchases (using selling price)
+      const revenueQuery = await db
+        .select({ 
+          total: sql<number>`sum(${purchases.quantity} * ${purchases.sellingPrice})` 
+        })
+        .from(purchases)
+        .where(eq(purchases.userId, userId));
+      
+      const totalRevenue = revenueQuery[0]?.total || 0;
+
+      // Count total purchases as sales proxy
+      const salesQuery = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(purchases)
+        .where(eq(purchases.userId, userId));
+      
+      const totalSales = salesQuery[0]?.count || 0;
+
+      // Count total customers (no store filtering needed for customers)
+      const customersQuery = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(customers);
+      
+      const totalCustomers = customersQuery[0]?.count || 0;
+
+      // Count total products (no store filtering needed for products)
+      const productsQuery = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(products);
+      
+      const totalProducts = productsQuery[0]?.count || 0;
+
+      res.json({
+        totalRevenue,
+        totalSales,
+        totalCustomers,
+        totalProducts
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard metrics:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch dashboard metrics' 
+      });
+    }
+  });
+
+  // Get cash flow data for dashboard chart
+  app.get('/api/dashboard/cash-flow', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const { period = 'Week' } = req.query;
+      
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const accessibleStoreIds = await getAccessibleStoreIds(userId);
+      
+      if (accessibleStoreIds.length === 0) {
+        return res.json({
+          revenue: 0,
+          expenses: 0,
+          cashFlow: 0,
+          previousCashFlow: 0,
+          period: period as string
+        });
+      }
+
+      // Define date ranges based on period
+      const now = new Date();
+      let startDate: Date, endDate: Date, prevStartDate: Date, prevEndDate: Date;
+
+      switch (period) {
+        case 'Today':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 1);
+          prevStartDate = new Date(startDate);
+          prevStartDate.setDate(prevStartDate.getDate() - 1);
+          prevEndDate = new Date(startDate);
+          break;
+        case 'Month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          prevEndDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'Year':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          endDate = new Date(now.getFullYear() + 1, 0, 1);
+          prevStartDate = new Date(now.getFullYear() - 1, 0, 1);
+          prevEndDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        default: // Week
+          const startOfWeek = new Date(now);
+          startOfWeek.setDate(now.getDate() - now.getDay());
+          startDate = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate());
+          endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 7);
+          prevStartDate = new Date(startDate);
+          prevStartDate.setDate(prevStartDate.getDate() - 7);
+          prevEndDate = new Date(startDate);
+          break;
+      }
+
+      // Calculate current period revenue (using potential selling price from purchases)
+      const currentRevenueQuery = await db
+        .select({ 
+          total: sql<number>`sum(${purchases.quantity} * ${purchases.sellingPrice})` 
+        })
+        .from(purchases)
+        .where(
+          and(
+            eq(purchases.userId, userId),
+            gte(purchases.createdAt, startDate),
+            lt(purchases.createdAt, endDate)
+          )
+        );
+
+      const currentRevenue = currentRevenueQuery[0]?.total || 0;
+
+      // Calculate current period expenses
+      const currentExpensesQuery = await db
+        .select({ 
+          total: sql<number>`sum(${purchases.totalCost})` 
+        })
+        .from(purchases)
+        .where(
+          and(
+            eq(purchases.userId, userId),
+            gte(purchases.createdAt, startDate),
+            lt(purchases.createdAt, endDate)
+          )
+        );
+
+      const currentExpenses = currentExpensesQuery[0]?.total || 0;
+
+      // Calculate previous period cash flow for comparison
+      const prevRevenueQuery = await db
+        .select({ 
+          total: sql<number>`sum(${purchases.quantity} * ${purchases.sellingPrice})` 
+        })
+        .from(purchases)
+        .where(
+          and(
+            eq(purchases.userId, userId),
+            gte(purchases.createdAt, prevStartDate),
+            lt(purchases.createdAt, prevEndDate)
+          )
+        );
+
+      const prevExpensesQuery = await db
+        .select({ 
+          total: sql<number>`sum(${purchases.totalCost})` 
+        })
+        .from(purchases)
+        .where(
+          and(
+            eq(purchases.userId, userId),
+            gte(purchases.createdAt, prevStartDate),
+            lt(purchases.createdAt, prevEndDate)
+          )
+        );
+
+      const prevRevenue = prevRevenueQuery[0]?.total || 0;
+      const prevExpenses = prevExpensesQuery[0]?.total || 0;
+      const currentCashFlow = currentRevenue - currentExpenses;
+      const previousCashFlow = prevRevenue - prevExpenses;
+
+      res.json({
+        revenue: currentRevenue,
+        expenses: currentExpenses,
+        cashFlow: currentCashFlow,
+        previousCashFlow,
+        period: period as string
+      });
+    } catch (error) {
+      console.error('Error fetching cash flow data:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch cash flow data' 
+      });
+    }
+  });
+
+  // Get inventory alerts for low stock products
+  app.get('/api/dashboard/inventory-alerts', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const accessibleStoreIds = await getAccessibleStoreIds(userId);
+      
+      if (accessibleStoreIds.length === 0) {
+        return res.json([]);
+      }
+
+      // Get products with low inventory (assuming min stock threshold of 10)
+      const lowStockProducts = await db
+        .select({
+          productId: products.id,
+          productName: products.name,
+          sku: products.sku,
+          storeId: products.storeId,
+          storeName: stores.name,
+          totalQuantity: sql<number>`coalesce(sum(${inventory.quantity}), 0)`,
+          minStock: sql<number>`10` // Default min stock threshold
+        })
+        .from(products)
+        .leftJoin(inventory, eq(products.id, inventory.productId))
+        .innerJoin(stores, eq(products.storeId, stores.id))
+        .where(inArray(products.storeId, accessibleStoreIds))
+        .groupBy(products.id, products.name, products.sku, products.storeId, stores.name)
+        .having(sql`coalesce(sum(${inventory.quantity}), 0) < 15`) // Low stock threshold
+        .orderBy(sql`coalesce(sum(${inventory.quantity}), 0)`)
+        .limit(10);
+
+      const alerts = lowStockProducts.map(product => ({
+        product: product.productName,
+        sku: product.sku || 'N/A',
+        stock: product.totalQuantity,
+        minStock: product.minStock,
+        status: product.totalQuantity < 5 ? 'critical' : 'low',
+        store: product.storeName
+      }));
+
+      res.json(alerts);
+    } catch (error) {
+      console.error('Error fetching inventory alerts:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch inventory alerts' 
+      });
+    }
+  });
+
+  // Get top performing products
+  app.get('/api/dashboard/top-products', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const accessibleStoreIds = await getAccessibleStoreIds(userId);
+      
+      if (accessibleStoreIds.length === 0) {
+        return res.json([]);
+      }
+
+      // Get top products by purchase quantity this month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+      const topProducts = await db
+        .select({
+          productName: products.name,
+          totalQuantity: sql<number>`sum(${purchases.quantity})`,
+          totalRevenue: sql<number>`sum(${purchases.quantity} * ${purchases.sellingPrice})`
+        })
+        .from(purchases)
+        .innerJoin(products, eq(purchases.productId, products.id))
+        .where(
+          and(
+            eq(purchases.userId, userId),
+            gte(purchases.createdAt, startOfMonth),
+            lt(purchases.createdAt, endOfMonth)
+          )
+        )
+        .groupBy(products.id, products.name)
+        .orderBy(sql`sum(${purchases.quantity}) desc`)
+        .limit(5);
+
+      const maxSales = topProducts[0]?.totalQuantity || 1;
+      
+      const formattedProducts = topProducts.map((product, index) => ({
+        name: product.productName,
+        sales: product.totalQuantity,
+        revenue: product.totalRevenue,
+        progress: Math.round((product.totalQuantity / maxSales) * 100),
+        trend: '+0%' // Calculate trend comparison with previous month if needed
+      }));
+
+      res.json(formattedProducts);
+    } catch (error) {
+      console.error('Error fetching top products:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Failed to fetch top products' 
       });
     }
   });

@@ -1,46 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp } from "lucide-react";
-
-const topProducts = [
-  {
-    name: "iPhone 15 Pro Max",
-    sales: 156,
-    revenue: "TSh 234,000",
-    progress: 92,
-    trend: "+12%"
-  },
-  {
-    name: "Samsung Galaxy S24 Ultra", 
-    sales: 134,
-    revenue: "TSh 189,500",
-    progress: 78,
-    trend: "+8%"
-  },
-  {
-    name: "MacBook Pro M3",
-    sales: 98,
-    revenue: "TSh 245,000",
-    progress: 65,
-    trend: "+15%"
-  },
-  {
-    name: "iPad Pro 11\"",
-    sales: 87,
-    revenue: "TSh 87,000",
-    progress: 58,
-    trend: "+5%"
-  },
-  {
-    name: "AirPods Pro 2",
-    sales: 234,
-    revenue: "TSh 58,500",
-    progress: 45,
-    trend: "+3%"
-  }
-];
+import { useQuery } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/currency";
 
 export function TopProducts() {
+  // Fetch real top products data from the database
+  const { data: topProducts = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/dashboard/top-products'],
+  });
+
+  // Fetch company info for currency
+  const { data: company } = useQuery<any>({
+    queryKey: ['/api/company'],
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -53,14 +27,21 @@ export function TopProducts() {
         </p>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {topProducts.map((product, index) => (
+        {isLoading ? (
+          <div className="text-center py-4">Loading top products...</div>
+        ) : topProducts.length === 0 ? (
+          <div className="text-center py-4 text-muted-foreground">
+            No product data available yet
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {topProducts.map((product, index) => (
             <div key={index} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground">{product.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {product.sales} units sold • {product.revenue}
+                    {product.sales} units sold • {company?.currency ? formatCurrency(product.revenue / 100, company.currency) : `$${(product.revenue / 100).toFixed(2)}`}
                   </p>
                 </div>
                 <div className="text-right">
@@ -71,8 +52,9 @@ export function TopProducts() {
               </div>
               <Progress value={product.progress} className="h-2" />
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

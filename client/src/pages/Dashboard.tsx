@@ -20,32 +20,37 @@ export default function Dashboard() {
     queryKey: ['/api/company'],
   });
 
+  // Fetch real dashboard metrics from the database
+  const { data: metricsData, isLoading: metricsLoading } = useQuery<any>({
+    queryKey: ['/api/dashboard/metrics'],
+  });
+
   const metrics = [
     {
       title: "Total Revenue",
-      value: formatCurrency(4523189, company?.currency || 'tzs'), // 45,231.89 in cents
-      change: "+20.1%",
+      value: formatCurrency((metricsData?.totalRevenue || 0) / 100, company?.currency || 'USD'),
+      change: "+20.1%", // TODO: Calculate actual percentage change
       changeType: "positive" as const,
       icon: DollarSign
     },
     {
       title: "Sales",
-      value: "2,350",
-      change: "+180.1%",
+      value: metricsData?.totalSales?.toString() || "0",
+      change: "+180.1%", // TODO: Calculate actual percentage change
       changeType: "positive" as const, 
       icon: ShoppingBag
     },
     {
       title: "Customers",
-      value: "1,234",
-      change: "+19%",
+      value: metricsData?.totalCustomers?.toString() || "0",
+      change: "+19%", // TODO: Calculate actual percentage change
       changeType: "positive" as const,
       icon: Users
     },
     {
       title: "Products",
-      value: "573",
-      change: "-2%",
+      value: metricsData?.totalProducts?.toString() || "0",
+      change: "-2%", // TODO: Calculate actual percentage change
       changeType: "negative" as const,
       icon: Package
     }

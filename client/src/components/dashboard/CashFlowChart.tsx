@@ -7,72 +7,50 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/currency";
 
 export function CashFlowChart() {
   const [filterPeriod, setFilterPeriod] = useState("Week");
   const [customDateFrom, setCustomDateFrom] = useState<Date>();
   const [customDateTo, setCustomDateTo] = useState<Date>();
 
-  const getCashFlowData = () => {
-    switch (filterPeriod) {
-      case "Today":
-        return {
-          revenue: 850,
-          expenses: 420,
-          cashFlow: 430,
-          previousCashFlow: 380,
-          period: "Today"
-        };
-      case "Week":
-        return {
-          revenue: 200000,
-          expenses: 400000,
-          cashFlow: -200000,
-          previousCashFlow: -180000,
-          period: "This week"
-        };
-      case "Month":
-        return {
-          revenue: 850000,
-          expenses: 650000,
-          cashFlow: 200000,
-          previousCashFlow: 180000,
-          period: "This month"
-        };
-      case "Year":
-        return {
-          revenue: 6800000,
-          expenses: 4200000,
-          cashFlow: 2600000,
-          previousCashFlow: 2200000,
-          period: "This year"
-        };
-      case "Custom":
-        return {
-          revenue: 250000,
-          expenses: 180000,
-          cashFlow: 70000,
-          previousCashFlow: 65000,
-          period: "Custom period"
-        };
-      default:
-        return {
-          revenue: 200000,
-          expenses: 400000,
-          cashFlow: -200000,
-          previousCashFlow: -180000,
-          period: "This week"
-        };
-    }
-  };
+  // Fetch real cash flow data from the database
+  const { data: cashFlowData, isLoading } = useQuery<any>({
+    queryKey: ['/api/dashboard/cash-flow', { period: filterPeriod }],
+  });
 
-  const data = getCashFlowData();
+  // Fetch company info for currency
+  const { data: company } = useQuery<any>({
+    queryKey: ['/api/company'],
+  });
+
+  const data = cashFlowData || {
+    revenue: 0,
+    expenses: 0,
+    cashFlow: 0,
+    previousCashFlow: 0,
+    period: filterPeriod
+  };
   const changePercent = Math.abs(((data.cashFlow - data.previousCashFlow) / Math.abs(data.previousCashFlow)) * 100);
   const isPositiveChange = data.cashFlow > data.previousCashFlow;
   const isNegativeCashFlow = data.cashFlow < 0;
   
   const maxAmount = Math.max(Math.abs(data.revenue), Math.abs(data.expenses));
   const revenueWidth = (Math.abs(data.revenue) / maxAmount) * 100;
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Cash Flow Analysis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">Loading cash flow data...</div>
+        </CardContent>
+      </Card>
+    );
+  }
   const expensesWidth = (Math.abs(data.expenses) / maxAmount) * 100;
 
   return (

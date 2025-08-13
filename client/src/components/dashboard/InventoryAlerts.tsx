@@ -1,43 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Package, TrendingDown } from "lucide-react";
-
-const inventoryAlerts = [
-  {
-    product: "iPhone 15 Pro",
-    sku: "IP15-PRO-256",
-    stock: 3,
-    minStock: 10,
-    status: "critical",
-    store: "Downtown Branch"
-  },
-  {
-    product: "Samsung Galaxy S24",
-    sku: "SGS24-128",
-    stock: 8,
-    minStock: 15,
-    status: "low",
-    store: "Mall Location"
-  },
-  {
-    product: "MacBook Air M3",
-    sku: "MBA-M3-512",
-    stock: 12,
-    minStock: 20,
-    status: "low",
-    store: "Airport Store"
-  },
-  {
-    product: "AirPods Pro 2",
-    sku: "APP2-USBC",
-    stock: 5,
-    minStock: 25,
-    status: "critical",
-    store: "Downtown Branch"
-  }
-];
+import { useQuery } from "@tanstack/react-query";
 
 export function InventoryAlerts() {
+  // Fetch real inventory alerts from the database
+  const { data: inventoryAlerts = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/dashboard/inventory-alerts'],
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -50,8 +21,15 @@ export function InventoryAlerts() {
         </p>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {inventoryAlerts.map((alert, index) => (
+        {isLoading ? (
+          <div className="text-center py-4">Loading inventory alerts...</div>
+        ) : inventoryAlerts.length === 0 ? (
+          <div className="text-center py-4 text-muted-foreground">
+            No inventory alerts at this time
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {inventoryAlerts.map((alert, index) => (
             <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-card-border hover:bg-muted/30 transition-colors">
               <div className="flex items-center space-x-3">
                 <div className={`p-2 rounded-lg ${
@@ -83,8 +61,9 @@ export function InventoryAlerts() {
                 </p>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
