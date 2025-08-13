@@ -30,7 +30,9 @@ import {
   productsCategories,
   inventory,
   inventoryBatch,
-  users
+  users,
+  teamMembers,
+  teamInvitations
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";

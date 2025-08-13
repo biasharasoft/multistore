@@ -1,0 +1,197 @@
+> rest-express@1.0.0 dev
+2:24:52 PM [express] serving on port 5000s
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Error fetching user with role: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:101:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:25:11 PM [express] GET /api/auth/me 304 in 186ms :: {"user":{"id":"fadc6171-34ec-4c5a-b538-fa5e6ac…
+Error fetching user with role: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:101:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:25:11 PM [express] GET /api/auth/me 304 in 38ms :: {"user":{"id":"fadc6171-34ec-4c5a-b538-fa5e6ac9…
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:25:11 PM [express] GET /api/stores 500 in 171ms :: {"message":"teamMembers is not defined"}
+2:25:11 PM [express] GET /api/company 304 in 205ms :: {"id":"349c9da6-f18e-4b1b-8482-c31675852f97","…
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:29:46 PM [express] GET /api/stores 500 in 257ms :: {"message":"teamMembers is not defined"}
+2:29:46 PM [express] GET /api/company 404 in 612ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:29:47 PM [express] GET /api/stores 500 in 39ms :: {"message":"teamMembers is not defined"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:29:49 PM [express] GET /api/stores 500 in 39ms :: {"message":"teamMembers is not defined"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:29:52 PM [express] GET /api/stores 500 in 40ms :: {"message":"teamMembers is not defined"}
+2:29:52 PM [express] GET /api/company 404 in 78ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:29:54 PM [express] GET /api/stores 500 in 40ms :: {"message":"teamMembers is not defined"}
+2:29:54 PM [express] GET /api/company 404 in 77ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:29:59 PM [express] GET /api/stores 500 in 41ms :: {"message":"teamMembers is not defined"}
+2:29:59 PM [express] GET /api/company 404 in 78ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:29:59 PM [express] GET /api/stores 500 in 40ms :: {"message":"teamMembers is not defined"}
+2:30:09 PM [express] GET /api/company 404 in 79ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:09 PM [express] GET /api/stores 500 in 236ms :: {"message":"teamMembers is not defined"}
+2:30:10 PM [express] GET /api/company 404 in 75ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:10 PM [express] GET /api/stores 500 in 39ms :: {"message":"teamMembers is not defined"}
+2:30:12 PM [express] GET /api/company 404 in 75ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:13 PM [express] GET /api/stores 500 in 38ms :: {"message":"teamMembers is not defined"}
+2:30:14 PM [express] POST /api/auth/logout 200 in 38ms :: {"message":"Logged out successfully"}
+2:30:24 PM [express] POST /api/auth/login 200 in 284ms :: {"user":{"id":"ab7016db-aa8a-4209-ad15-9ea…
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:24 PM [express] GET /api/stores 500 in 38ms :: {"message":"teamMembers is not defined"}
+2:30:24 PM [express] GET /api/company 404 in 209ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:26 PM [express] GET /api/stores 500 in 38ms :: {"message":"teamMembers is not defined"}
+2:30:26 PM [express] GET /api/company 404 in 75ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:28 PM [express] GET /api/stores 500 in 38ms :: {"message":"teamMembers is not defined"}
+2:30:28 PM [express] GET /api/company 404 in 73ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:32 PM [express] GET /api/stores 500 in 38ms :: {"message":"teamMembers is not defined"}
+2:30:33 PM [express] GET /api/company 404 in 74ms :: {"message":"Company not found"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:36 PM [express] GET /api/stores 500 in 38ms :: {"message":"teamMembers is not defined"}
+Error fetching user with role: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:101:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:36 PM [express] GET /api/auth/me 304 in 154ms :: {"user":{"id":"fadc6171-34ec-4c5a-b538-fa5e6ac…
+2:30:37 PM [express] GET /api/company 304 in 75ms :: {"id":"349c9da6-f18e-4b1b-8482-c31675852f97","u…
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:37 PM [express] GET /api/stores 500 in 38ms :: {"message":"teamMembers is not defined"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:40 PM [express] GET /api/stores 500 in 39ms :: {"message":"teamMembers is not defined"}
+2:30:43 PM [express] POST /api/auth/logout 200 in 38ms :: {"message":"Logged out successfully"}
+2:30:48 PM [express] POST /api/auth/login 200 in 270ms :: {"user":{"id":"db63b14d-5d2b-4939-b1c4-269…
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:48 PM [express] GET /api/stores 500 in 39ms :: {"message":"teamMembers is not defined"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:49 PM [express] GET /api/stores 500 in 38ms :: {"message":"teamMembers is not defined"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:52 PM [express] GET /api/stores 500 in 39ms :: {"message":"teamMembers is not defined"}
+Error fetching stores: ReferenceError: teamMembers is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:221:15)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at authenticateToken (/home/runner/workspace/server/middleware/auth.ts:30:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:30:56 PM [express] GET /api/stores 500 in 38ms :: {"message":"teamMembers is not defined"}
