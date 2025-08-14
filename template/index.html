@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail Management System - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-store"></i>
+                    <span class="logo-text">RetailPro</span>
+                </div>
+                <button class="collapse-btn">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+
+            <div class="store-selector">
+                <div class="store-info">
+                    <div class="store-avatar">MS</div>
+                    <div class="store-details">
+                        <div class="store-name">Main Store</div>
+                        <div class="store-role">Owner</div>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#pos" class="nav-item">
+                    <i class="fas fa-cash-register"></i>
+                    <span>POS</span>
+                </a>
+                <a href="#products" class="nav-item">
+                    <i class="fas fa-box"></i>
+                    <span>Products</span>
+                </a>
+                <a href="#inventory" class="nav-item">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Inventory</span>
+                </a>
+                <a href="#customers" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Customers</span>
+                </a>
+                <a href="#sales" class="nav-item">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Sales</span>
+                </a>
+                <a href="#purchase" class="nav-item">
+                    <i class="fas fa-truck"></i>
+                    <span>Purchase</span>
+                </a>
+                <a href="#expenses" class="nav-item">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Expenses</span>
+                </a>
+                <a href="#suppliers" class="nav-item">
+                    <i class="fas fa-building"></i>
+                    <span>Suppliers</span>
+                </a>
+                <a href="#stores" class="nav-item">
+                    <i class="fas fa-store-alt"></i>
+                    <span>Stores</span>
+                </a>
+                <a href="#analytics" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="#settings" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search products, customers, orders...">
+                </div>
+                
+                <div class="header-actions">
+                    <button class="notification-btn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    
+                    <button class="add-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    
+                    <div class="user-menu">
+                        <div class="user-avatar">JD</div>
+                        <div class="user-info">
+                            <div class="user-name">John Doe</div>
+                            <div class="user-email">john@retailpro.com</div>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <main class="content">
+                <div class="content-header">
+                    <div>
+                        <h1>Dashboard</h1>
+                        <p>Welcome back! Here's what's happening with your stores today.</p>
+                    </div>
+                    <div class="date-info">
+                        <p class="date-label">Today</p>
+                        <p class="date-value">Wednesday, August 14, 2025</p>
+                    </div>
+                </div>
+
+                <!-- Metrics Cards -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon success">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3>Total Revenue</h3>
+                            <div class="metric-value">$0.00</div>
+                            <div class="metric-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                +20.1%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon primary">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3>Sales</h3>
+                            <div class="metric-value">0</div>
+                            <div class="metric-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                +180.1%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon info">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3>Customers</h3>
+                            <div class="metric-value">2</div>
+                            <div class="metric-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                +19%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon warning">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <div class="metric-info">
+                            <h3>Products</h3>
+                            <div class="metric-value">3</div>
+                            <div class="metric-change negative">
+                                <i class="fas fa-arrow-down"></i>
+                                -2%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts and Tables Section -->
+                <div class="dashboard-grid">
+                    <!-- Cash Flow Chart -->
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3>Cash Flow</h3>
+                            <div class="chart-legend">
+                                <div class="legend-item">
+                                    <span class="legend-color revenue"></span>
+                                    Revenue
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-color expenses"></span>
+                                    Expenses
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="cashFlowChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Inventory Alerts -->
+                    <div class="alerts-card">
+                        <div class="card-header">
+                            <h3>Inventory Alerts</h3>
+                            <span class="alert-count">0 alerts</span>
+                        </div>
+                        <div class="alerts-content">
+                            <div class="no-alerts">
+                                <i class="fas fa-check-circle"></i>
+                                <p>All products are well stocked</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Products -->
+                    <div class="products-card">
+                        <div class="card-header">
+                            <h3>Top Selling Products</h3>
+                        </div>
+                        <div class="products-content">
+                            <div class="no-products">
+                                <i class="fas fa-chart-bar"></i>
+                                <p>No sales data available yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
